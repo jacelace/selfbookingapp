@@ -1,147 +1,127 @@
-import React, { useState } from 'react';
-import { Plus, Edit2, Save, X } from 'lucide-react';
-import { ColorLabel } from './ColorLabel';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+'use client';
 
-interface User {
-  id: string;
-  name: string;
-  label: {
-    id: string;
-    name: string;
-    color: string;
-  };
-  totalBookings: number;
-  remainingBookings: number;
-  totalSessions: number;
-}
+import React, { useState } from 'react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase/clientApp';
+import { EnhancedUser } from '../types/shared';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Switch } from './ui/switch';
+import { toast } from './ui/use-toast';
 
 interface UserManagementProps {
-  users: User[];
-  onAddUser: (user: Omit<User, 'id'>) => void;
-  onUpdateUser: (user: User) => void;
+  users: EnhancedUser[];
+  onUpdateUser: (user: EnhancedUser) => void;
+  onDeleteUser: (userId: string) => void;
 }
 
-export const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onUpdateUser }) => {
-  const [newUserName, setNewUserName] = useState('');
-  const [newUserLabelId, setNewUserLabelId] = useState('');
-  const [newUserTotalSessions, setNewUserTotalSessions] = useState('');
-  const [editingUserId, setEditingUserId] = useState<string | null>(null);
-  const [editingTotalSessions, setEditingTotalSessions] = useState('');
+const UserManagement: React.FC<UserManagementProps> = ({ users, onUpdateUser, onDeleteUser }) => {
+  const [updating, setUpdating] = useState<string | null>(null);
 
-  const handleAddUser = () => {
-    if (newUserName && newUserLabelId && newUserTotalSessions) {
-      onAddUser({
-        name: newUserName,
-        label: {
-          id: newUserLabelId,
-          name: 'Default Label', // This should be replaced with actual label data
-          color: '#000000', // This should be replaced with actual label data
-        },
-        totalBookings: 0,
-        remainingBookings: parseInt(newUserTotalSessions),
-        totalSessions: parseInt(newUserTotalSessions),
+  const handleUpdateUser = async (user: EnhancedUser, changes: Partial<EnhancedUser>) => {
+    try {
+      setUpdating(user.id);
+      const userRef = doc(db, 'users', user.id);
+      
+      // If changing approval status or sessions, update remaining bookings
+      if ('isApproved' in changes || 'sessions' in changes) {
+        const newSessions = changes.sessions ?? user.sessions;
+        const newIsApproved = changes.isApproved ?? user.isApproved;
+        
+        changes.remainingBookings = newIsApproved ? newSessions : 0;
+      }
+
+      await updateDoc(userRef, changes);
+      onUpdateUser({ ...user, ...changes });
+      toast({
+        title: 'Success',
+        description: 'User updated successfully',
       });
-      setNewUserName('');
-      setNewUserLabelId('');
-      setNewUserTotalSessions('');
-    }
-  };
-
-  const handleUpdateTotalSessions = (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    if (user && editingTotalSessions) {
-      const updatedUser = {
-        ...user,
-        totalSessions: parseInt(editingTotalSessions),
-        remainingBookings: parseInt(editingTotalSessions) - user.totalBookings,
-      };
-      onUpdateUser(updatedUser);
-      setEditingUserId(null);
-      setEditingTotalSessions('');
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update user',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdating(null);
     }
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>User Management</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex space-x-2">
-            <Input
-              type="text"
-              value={newUserName}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewUserName(e.target.value)}
-              placeholder="User Name"
-            />
-            <Input
-              type="text"
-              value={newUserLabelId}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewUserLabelId(e.target.value)}
-              placeholder="Label ID"
-            />
-            <Input
-              type="number"
-              value={newUserTotalSessions}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewUserTotalSessions(e.target.value)}
-              placeholder="Total Sessions"
-            />
-            <Button onClick={handleAddUser} className="flex items-center">
-              <Plus className="mr-1" size={16} /> Add User
-            </Button>
-          </div>
-          <ul className="space-y-2">
+    <div className="bg-white p-6 rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-4 text-dark-purple">User Management</h2>
+
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-light-brown">
+              <th className="p-2 text-left text-dark-purple">Name</th>
+              <th className="p-2 text-left text-dark-purple">Email</th>
+              <th className="p-2 text-left text-dark-purple">Booking Privileges</th>
+              <th className="p-2 text-left text-dark-purple">Sessions</th>
+              <th className="p-2 text-left text-dark-purple">Label</th>
+              <th className="p-2 text-left text-dark-purple">Total Bookings</th>
+              <th className="p-2 text-left text-dark-purple">Remaining Bookings</th>
+              <th className="p-2 text-left text-dark-purple">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
             {users.map((user) => (
-              <li key={user.id} className="flex items-center space-x-2 bg-gray-100 p-2 rounded">
-                <ColorLabel name={user.label.name} color={user.label.color} />
-                <span className="font-medium">{user.name}</span>
-                <span className="text-sm text-gray-500">
-                  (Bookings: {user.totalBookings}, Remaining: {user.remainingBookings}, Total Sessions: {user.totalSessions})
-                </span>
-                {editingUserId === user.id ? (
-                  <>
-                    <Input
-                      type="number"
-                      value={editingTotalSessions}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingTotalSessions(e.target.value)}
-                      className="w-20"
-                    />
-                    <Button
-                      onClick={() => handleUpdateTotalSessions(user.id)}
-                      size="sm"
-                      className="bg-green-500 hover:bg-green-600"
-                    >
-                      <Save size={16} />
-                    </Button>
-                    <Button
-                      onClick={() => setEditingUserId(null)}
-                      size="sm"
-                      variant="outline"
-                    >
-                      <X size={16} />
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    onClick={() => {
-                      setEditingUserId(user.id);
-                      setEditingTotalSessions(user.totalSessions.toString());
+              <tr key={user.id} className="border-b border-light-brown">
+                <td className="p-2">{user.name}</td>
+                <td className="p-2">{user.email}</td>
+                <td className="p-2">
+                  <Switch
+                    checked={user.isApproved}
+                    onCheckedChange={(checked) => 
+                      handleUpdateUser(user, { isApproved: checked })
+                    }
+                    disabled={updating === user.id}
+                  />
+                </td>
+                <td className="p-2">
+                  <Input
+                    type="number"
+                    value={user.sessions}
+                    onChange={(e) => {
+                      const sessions = parseInt(e.target.value);
+                      if (!isNaN(sessions) && sessions >= 0) {
+                        handleUpdateUser(user, { sessions });
+                      }
                     }}
-                    size="sm"
-                    variant="outline"
+                    className="w-20"
+                    disabled={updating === user.id}
+                  />
+                </td>
+                <td className="p-2">
+                  <div 
+                    className="inline-block px-2 py-1 rounded" 
+                    style={{ backgroundColor: user.label.color }}
                   >
-                    <Edit2 size={16} />
+                    {user.label.name}
+                  </div>
+                </td>
+                <td className="p-2">{user.totalBookings}</td>
+                <td className="p-2">{user.remainingBookings}</td>
+                <td className="p-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onDeleteUser(user.id)}
+                    disabled={updating === user.id}
+                  >
+                    Delete
                   </Button>
-                )}
-              </li>
+                </td>
+              </tr>
             ))}
-          </ul>
-        </div>
-      </CardContent>
-    </Card>
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 };
+
+export default UserManagement;

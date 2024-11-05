@@ -1,121 +1,221 @@
-import React, { useState, useEffect } from 'react';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import SlotSelection from './SlotSelection';
+'use client';
 
-interface User {
-  id: string;
-  name: string;
-  totalSessions: number;
-  remainingBookings: number;
-}
+import React, { useState } from 'react';
+import { addDoc, collection, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { db, auth } from '../firebase/clientApp';
+import { Button } from './ui/button';
+import { Calendar } from './ui/calendar';
+import { Card } from './ui/card';
+import { toast } from './ui/use-toast';
+import { useRouter } from 'next/navigation';
+import { Checkbox } from './ui/checkbox';
+import { Label } from './ui/label';
 
 interface BookingFormProps {
-  users: User[];
-  onAddBooking: (userId: string, date: Date, time: string) => void;
   selectedDate: Date;
+  selectedSlot: string;
+  onCancel: () => void;
 }
 
-export const BookingForm: React.FC<BookingFormProps> = ({ users, onAddBooking, selectedDate }) => {
-  const [userId, setUserId] = useState('');
-  const [date, setDate] = useState<Date | null>(selectedDate);
-  const [time, setTime] = useState('');
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [isVisible, setIsVisible] = useState(false);
+const BookingForm: React.FC<BookingFormProps> = ({
+  selectedDate,
+  selectedSlot,
+  onCancel,
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringWeeks, setRecurringWeeks] = useState(4); // Default to 4 weeks
+  const router = useRouter();
 
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
+  const createRecurringBookings = async (userId: string, userData: any) => {
+    const bookings = [];
+    let currentDate = new Date(selectedDate);
+    let remainingBookings = userData.remainingBookings;
 
-  useEffect(() => {
-    setDate(selectedDate);
-  }, [selectedDate]);
+    // Create bookings for the specified number of weeks
+    for (let i = 0; i < recurringWeeks && remainingBookings > 0; i++) {
+      const bookingData = {
+        userId,
+        date: new Date(currentDate),
+        slot: selectedSlot,
+        status: 'confirmed',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isRecurring: true,
+        recurringGroupId: `${userId}-${currentDate.getTime()}-${selectedSlot}`,
+      };
 
-  const validateForm = () => {
-    const newErrors: { [key: string]: string } = {};
-    if (!userId) newErrors.userId = 'Please select a user';
-    if (!date) newErrors.date = 'Please select a date';
-    if (!time) newErrors.time = 'Please select a time slot';
-
-    const selectedUser = users.find(user => user.id === userId);
-    if (selectedUser && selectedUser.remainingBookings <= 0) {
-      newErrors.userId = 'This user has no remaining sessions';
+      bookings.push(bookingData);
+      remainingBookings--;
+      
+      // Move to next week
+      currentDate.setDate(currentDate.getDate() + 7);
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    // Create all bookings
+    const bookingRefs = await Promise.all(
+      bookings.map(booking => addDoc(collection(db, 'bookings'), booking))
+    );
+
+    // Update user's remaining bookings
+    await updateDoc(doc(db, 'users', userId), {
+      remainingBookings,
+      totalBookings: (userData.totalBookings || 0) + bookings.length,
+      lastBooking: {
+        id: bookingRefs[0].id,
+        date: selectedDate,
+        slot: selectedSlot,
+        status: 'confirmed',
+        isRecurring: true,
+      },
+    });
+
+    return bookingRefs;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm() && date && time) {
-      onAddBooking(userId, date, time);
-      setUserId('');
-      setDate(selectedDate);
-      setTime('');
+    if (!auth.currentUser) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to book',
+        variant: 'destructive',
+      });
+      return;
     }
-  };
 
-  const handleDateChange = (newDate: Date | null) => {
-    setDate(newDate);
-    setTime(''); // Reset time when date changes
-  };
+    setLoading(true);
+    try {
+      // Check user's booking privileges and remaining sessions
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
 
-  const isWeekday = (date: Date) => {
-    const day = date.getDay();
-    return day !== 0 && day !== 6;
+      if (!userData?.isApproved) {
+        throw new Error('Your account is not approved for booking');
+      }
+
+      if (userData.remainingBookings <= 0) {
+        throw new Error('You have no remaining booking sessions');
+      }
+
+      // Check if user has enough remaining sessions for recurring bookings
+      if (isRecurring && userData.remainingBookings < recurringWeeks) {
+        throw new Error(`You need at least ${recurringWeeks} remaining sessions for recurring bookings`);
+      }
+
+      if (isRecurring) {
+        // Handle recurring bookings
+        await createRecurringBookings(auth.currentUser.uid, userData);
+        toast({
+          title: 'Success',
+          description: `Created ${recurringWeeks} recurring bookings successfully`,
+        });
+      } else {
+        // Create single booking
+        const bookingData = {
+          userId: auth.currentUser.uid,
+          date: selectedDate,
+          slot: selectedSlot,
+          status: 'confirmed',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isRecurring: false,
+        };
+
+        const bookingRef = await addDoc(collection(db, 'bookings'), bookingData);
+
+        // Update user's remaining bookings and store last booking details
+        await updateDoc(userRef, {
+          remainingBookings: userData.remainingBookings - 1,
+          totalBookings: (userData.totalBookings || 0) + 1,
+          lastBooking: {
+            id: bookingRef.id,
+            date: selectedDate,
+            slot: selectedSlot,
+            status: 'confirmed',
+            isRecurring: false,
+          },
+        });
+
+        toast({
+          title: 'Success',
+          description: 'Booking created successfully',
+        });
+      }
+      
+      router.push('/booking/success');
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to create booking',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className={`bg-white rounded-lg shadow-md p-6 space-y-6 transition-all duration-500 ease-in-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-      <h3 className="text-xl font-semibold text-gray-800 mb-4">Add New Booking</h3>
-      <div>
-        <label htmlFor="user" className="block text-sm font-medium text-gray-700 mb-1">
-          User
-        </label>
-        <select
-          id="user"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-          className={`block w-full px-3 py-2 text-base border rounded-md focus:outline-none focus:ring-2 transition duration-150 ease-in-out ${errors.userId ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}`}
-        >
-          <option value="">Select a user</option>
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.name} (Remaining sessions: {user.remainingBookings})
-            </option>
-          ))}
-        </select>
-        {errors.userId && <p className="mt-1 text-sm text-red-500">{errors.userId}</p>}
-      </div>
-      <div>
-        <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
-          Date
-        </label>
-        <DatePicker
-          selected={date}
-          onChange={handleDateChange}
-          className={`block w-full px-3 py-2 text-base border rounded-md focus:outline-none focus:ring-2 transition duration-150 ease-in-out ${errors.date ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}`}
-          dateFormat="MMMM d, yyyy"
-        />
-        {errors.date && <p className="mt-1 text-sm text-red-500">{errors.date}</p>}
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Time Slot
-        </label>
-        <SlotSelection
-          date={date}
-          onSlotSelect={(selectedTime: string) => setTime(selectedTime)}
-        />
-        {errors.time && <p className="mt-1 text-sm text-red-500">{errors.time}</p>}
-      </div>
-      <button
-        type="submit"
-        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out"
-      >
-        Add Booking
-      </button>
-    </form>
+    <Card className="p-6">
+      <h2 className="text-2xl font-bold mb-4">Confirm Booking</h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <p className="font-medium">Selected Date:</p>
+          <p>{selectedDate.toLocaleDateString()}</p>
+        </div>
+        <div>
+          <p className="font-medium">Selected Time:</p>
+          <p>{selectedSlot}</p>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="recurring"
+            checked={isRecurring}
+            onCheckedChange={(checked) => setIsRecurring(checked as boolean)}
+          />
+          <Label htmlFor="recurring">Make this a recurring weekly booking</Label>
+        </div>
+
+        {isRecurring && (
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="weeks">Number of weeks:</Label>
+            <select
+              id="weeks"
+              value={recurringWeeks}
+              onChange={(e) => setRecurringWeeks(Number(e.target.value))}
+              className="border rounded p-1"
+            >
+              {[2, 3, 4, 5, 6, 7, 8].map(num => (
+                <option key={num} value={num}>{num} weeks</option>
+              ))}
+            </select>
+          </div>
+        )}
+        
+        <div className="flex gap-4">
+          <Button
+            type="submit"
+            disabled={loading}
+            className="flex-1"
+          >
+            {loading ? 'Confirming...' : 'Confirm Booking'}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1"
+          >
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 };
+
+export default BookingForm;

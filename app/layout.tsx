@@ -1,22 +1,30 @@
-import './globals.css'
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { FirebaseProvider } from "./FirebaseProvider";
+import ErrorBoundary from "./components/ErrorBoundary";
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Booking App',
-  description: 'Book your session',
-}
+  title: "Self Booking App",
+  description: "Book your therapy sessions easily",
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <ErrorBoundary>
+          <FirebaseProvider>
+            {children}
+          </FirebaseProvider>
+        </ErrorBoundary>
+      </body>
     </html>
-  )
+  );
 }

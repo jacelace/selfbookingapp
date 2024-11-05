@@ -1,124 +1,195 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { Button } from '../components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { Settings } from 'lucide-react'
-import BookingCalendar from '../components/BookingCalendar'
-import { BookingForm } from '../components/BookingForm'
+import { useState } from 'react';
+import { addDoc, collection, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { db, auth } from '../firebase/clientApp';
+import BookingCalendar from '../components/BookingCalendar';
+import { toast } from '../components/ui/use-toast';
+import { useRouter } from 'next/navigation';
+import LoadingSpinner from '../components/LoadingSpinner';
 
-interface User {
-  id: string;
-  name: string;
-  totalSessions: number;
-  remainingBookings: number;
+interface RecurringBookingInfo {
+  isRecurring: boolean;
+  weeks: number;
 }
 
-interface Booking {
-  id: string;
-  userId: string;
-  date: Date;
-  time: string;
-}
+export default function BookingPage() {
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedTime, setSelectedTime] = useState("10:00 AM");
+  const [recurringInfo, setRecurringInfo] = useState<RecurringBookingInfo>({
+    isRecurring: false,
+    weeks: 4
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
 
-export default function BookingApp() {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [booking, setBooking] = useState<{ userId: string; date: Date; time: string } | null>(null)
-  const [showConfirmation, setShowConfirmation] = useState(false)
-  const [bookings, setBookings] = useState<Booking[]>([])
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+  };
 
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date)
-  }
+  const handleTimeSelect = (time: string) => {
+    setSelectedTime(time);
+  };
 
-  const handleAddBooking = (userId: string, date: Date, time: string) => {
-    const newBooking = { id: (bookings.length + 1).toString(), userId, date, time }
-    setBookings([...bookings, newBooking])
-    setBooking({ userId, date, time })
-    setShowConfirmation(false)
-    setTimeout(() => setShowConfirmation(true), 100) // Delay to trigger animation
-  }
+  const createRecurringBookings = async (userId: string, userData: any) => {
+    const bookings = [];
+    let currentDate = new Date(selectedDate!);
+    let remainingBookings = userData.remainingBookings;
 
-  // Mock users data with totalSessions and remainingBookings
-  const users: User[] = [
-    { id: '1', name: 'John Doe', totalSessions: 10, remainingBookings: 8 },
-    { id: '2', name: 'Jane Smith', totalSessions: 15, remainingBookings: 12 },
-  ]
+    // Create bookings for the specified number of weeks
+    for (let i = 0; i < recurringInfo.weeks && remainingBookings > 0; i++) {
+      const bookingData = {
+        userId,
+        date: new Date(currentDate),
+        slot: selectedTime,
+        status: 'confirmed',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isRecurring: true,
+        recurringGroupId: `${userId}-${currentDate.getTime()}-${selectedTime}`,
+      };
 
-  useEffect(() => {
-    // Add custom styles for animations and background
-    const style = document.createElement('style')
-    style.textContent = `
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      .fade-in {
-        animation: fadeIn 0.5s ease-out forwards;
-      }
-      body {
-        background-color: #f0f4f8;
-        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-      }
-    `
-    document.head.appendChild(style)
-    return () => {
-      document.head.removeChild(style)
+      bookings.push(bookingData);
+      remainingBookings--;
+      
+      // Move to next week
+      currentDate.setDate(currentDate.getDate() + 7);
     }
-  }, [])
+
+    try {
+      // Create all bookings
+      const bookingRefs = await Promise.all(
+        bookings.map(booking => addDoc(collection(db, 'bookings'), booking))
+      );
+
+      // Update user's remaining bookings
+      await updateDoc(doc(db, 'users', userId), {
+        remainingBookings,
+        totalBookings: (userData.totalBookings || 0) + bookings.length,
+        lastBooking: {
+          id: bookingRefs[0].id,
+          date: selectedDate,
+          slot: selectedTime,
+          status: 'confirmed',
+          isRecurring: true,
+        },
+      });
+
+      return bookings.length;
+    } catch (error) {
+      console.error('Error creating recurring bookings:', error);
+      throw new Error('Failed to create recurring bookings');
+    }
+  };
+
+  const handleBookingSubmit = async () => {
+    if (!auth.currentUser || !selectedDate) {
+      toast({
+        title: 'Error',
+        description: 'Please sign in and select a date',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Check user's booking privileges and remaining sessions
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data();
+
+      if (!userData?.isApproved) {
+        throw new Error('Your account is not approved for booking');
+      }
+
+      if (userData.remainingBookings <= 0) {
+        throw new Error('You have no remaining booking sessions');
+      }
+
+      // Check if user has enough remaining sessions for recurring bookings
+      if (recurringInfo.isRecurring && userData.remainingBookings < recurringInfo.weeks) {
+        throw new Error(`You need at least ${recurringInfo.weeks} remaining sessions for recurring bookings`);
+      }
+
+      let bookingsCreated = 0;
+
+      if (recurringInfo.isRecurring) {
+        // Handle recurring bookings
+        bookingsCreated = await createRecurringBookings(auth.currentUser.uid, userData);
+        toast({
+          title: 'Success',
+          description: `Created ${bookingsCreated} recurring bookings successfully`,
+        });
+      } else {
+        // Create single booking
+        const bookingData = {
+          userId: auth.currentUser.uid,
+          date: selectedDate,
+          slot: selectedTime,
+          status: 'confirmed',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isRecurring: false,
+        };
+
+        const bookingRef = await addDoc(collection(db, 'bookings'), bookingData);
+
+        // Update user's remaining bookings and store last booking details
+        await updateDoc(userRef, {
+          remainingBookings: userData.remainingBookings - 1,
+          totalBookings: (userData.totalBookings || 0) + 1,
+          lastBooking: {
+            id: bookingRef.id,
+            date: selectedDate,
+            slot: selectedTime,
+            status: 'confirmed',
+            isRecurring: false,
+          },
+        });
+
+        bookingsCreated = 1;
+        toast({
+          title: 'Success',
+          description: 'Booking created successfully',
+        });
+      }
+
+      router.push('/booking/success');
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to create booking',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isSubmitting) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size={32} />
+          <p className="mt-4 text-lg text-gray-600">Creating your booking{recurringInfo.isRecurring ? 's' : ''}...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8 sm:mb-12">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">Booking System</h1>
-          <Link href="/admin">
-            <Button variant="outline" size="icon" className="hover:bg-gray-100 transition-colors duration-200">
-              <Settings className="h-5 w-5" />
-            </Button>
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-          <Card className="shadow-lg">
-            <CardHeader className="bg-gray-50 border-b">
-              <CardTitle className="text-xl sm:text-2xl">Select Date</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6">
-              <BookingCalendar onDateSelect={handleDateSelect} selectedDate={selectedDate} bookings={bookings} />
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg">
-            <CardHeader className="bg-gray-50 border-b">
-              <CardTitle className="text-xl sm:text-2xl">Book a Session</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6">
-              <BookingForm
-                users={users}
-                onAddBooking={handleAddBooking}
-                selectedDate={selectedDate}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {booking && showConfirmation && (
-          <Card className="mt-8 sm:mt-12 shadow-lg bg-green-50 border-green-200 fade-in">
-            <CardHeader className="bg-green-100 border-b border-green-200">
-              <CardTitle className="text-xl sm:text-2xl text-green-800">Booking Confirmed</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6">
-              <div className="space-y-2 text-green-800">
-                <p><span className="font-semibold">User:</span> {users.find(user => user.id === booking.userId)?.name}</p>
-                <p><span className="font-semibold">Date:</span> {booking.date.toDateString()}</p>
-                <p><span className="font-semibold">Time:</span> {booking.time}</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <BookingCalendar
+        onDateSelect={handleDateSelect}
+        onTimeSelect={handleTimeSelect}
+        onBookingSubmit={handleBookingSubmit}
+        onRecurringChange={(isRecurring, weeks) => 
+          setRecurringInfo({ isRecurring, weeks })
+        }
+      />
     </div>
-  )
+  );
 }

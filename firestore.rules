@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isApprovedUser() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isApproved == true &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.remainingBookings > 0;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == userId && 
+                   request.resource.data.role == 'user' &&
+                   request.resource.data.isApproved == false;
+      allow update: if isAdmin() || (isOwner(userId) && 
+                   !request.resource.data.diff(resource.data).affectedKeys()
+                   .hasAny(['role', 'isApproved', 'sessions', 'remainingBookings']));
+    }
+
+    // Bookings collection
+    match /bookings/{bookingId} {
+      allow read: if isAuthenticated() && 
+                 (isAdmin() || isOwner(resource.data.userId));
+      allow create: if isAuthenticated() && 
+                   (isAdmin() || (isApprovedUser() && request.resource.data.userId == request.auth.uid));
+      allow update: if isAuthenticated() && 
+                   (isAdmin() || (isApprovedUser() && resource.data.userId == request.auth.uid));
+      allow delete: if isAuthenticated() && 
+                   (isAdmin() || (isApprovedUser() && resource.data.userId == request.auth.uid));
+    }
+
+    // RecurringBookings collection
+    match /recurringBookings/{bookingId} {
+      allow read: if isAuthenticated() && 
+                 (isAdmin() || isOwner(resource.data.userId));
+      allow create: if isAuthenticated() && isAdmin();
+      allow update, delete: if isAuthenticated() && isAdmin();
+    }
+
+    // Labels collection
+    match /labels/{labelId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+  }
+}

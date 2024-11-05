@@ -1,25 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-interface Booking {
-  id: string;
-  userId: string;
-  date: Date;
-  time: string;
-  recurring: boolean;
-  userName: string;
-  userLabel: string;
-}
+import { EnhancedBooking } from '../types/shared';
 
 interface CustomCalendarProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
-  bookings: Booking[];
+  bookings: EnhancedBooking[];
 }
 
 export const CustomCalendar: React.FC<CustomCalendarProps> = ({ selectedDate, onDateSelect, bookings }) => {
-  const [currentMonth, setCurrentMonth] = useState(selectedDate.getMonth());
-  const [currentYear, setCurrentYear] = useState(selectedDate.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState<number>(selectedDate.getMonth());
+  const [currentYear, setCurrentYear] = useState<number>(selectedDate.getFullYear());
 
   useEffect(() => {
     setCurrentMonth(selectedDate.getMonth());
@@ -32,7 +23,7 @@ export const CustomCalendar: React.FC<CustomCalendarProps> = ({ selectedDate, on
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
   const emptyDays = Array.from({ length: firstDayOfMonth }, (_, i) => i);
 
-  const handlePrevMonth = () => {
+  const handlePrevMonth = (): void => {
     if (currentMonth === 0) {
       setCurrentMonth(11);
       setCurrentYear(currentYear - 1);
@@ -41,7 +32,7 @@ export const CustomCalendar: React.FC<CustomCalendarProps> = ({ selectedDate, on
     }
   };
 
-  const handleNextMonth = () => {
+  const handleNextMonth = (): void => {
     if (currentMonth === 11) {
       setCurrentMonth(0);
       setCurrentYear(currentYear + 1);
@@ -50,17 +41,16 @@ export const CustomCalendar: React.FC<CustomCalendarProps> = ({ selectedDate, on
     }
   };
 
-  const handleDateClick = (day: number) => {
+  const handleDateClick = (day: number): void => {
     onDateSelect(new Date(currentYear, currentMonth, day));
   };
 
-  const getBookingsForDate = (date: Date) => {
-    return bookings.filter(booking => 
-      booking.date.toDateString() === date.toDateString()
-    );
+  const getBookingsForDate = (date: Date): EnhancedBooking[] => {
+    const dateString = date.toISOString().split('T')[0];
+    return bookings.filter(booking => booking.date === dateString);
   };
 
-  const getBookingColor = (userLabel: string) => {
+  const getBookingColor = (userLabel: string): string => {
     switch (userLabel.toLowerCase()) {
       case 'vip':
         return 'bg-yellow-200';
@@ -70,6 +60,8 @@ export const CustomCalendar: React.FC<CustomCalendarProps> = ({ selectedDate, on
         return 'bg-gray-200';
     }
   };
+
+  const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] as const;
 
   return (
     <div className="w-full max-w-sm mx-auto">
@@ -85,7 +77,7 @@ export const CustomCalendar: React.FC<CustomCalendarProps> = ({ selectedDate, on
         </button>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center">
-        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+        {weekDays.map((day) => (
           <div key={day} className="font-medium text-sm p-2">
             {day}
           </div>
@@ -110,7 +102,7 @@ export const CustomCalendar: React.FC<CustomCalendarProps> = ({ selectedDate, on
                 <span>{day}</span>
                 {dayBookings.length > 0 && (
                   <div className="absolute bottom-0 left-0 right-0 flex justify-center space-x-1">
-                    {dayBookings.map((booking, index) => (
+                    {dayBookings.map((booking) => (
                       <div
                         key={booking.id}
                         className={`w-2 h-2 rounded-full ${getBookingColor(booking.userLabel)}`}
