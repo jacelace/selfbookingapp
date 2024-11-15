@@ -1,0 +1,20 @@
+{
+  "rules": {
+    "bookings": {
+      "read": "request.auth != null",
+      "write": true,
+      "$booking": {
+        "read": "request.auth != null || resource.data.email == request.auth.token.email",
+        "write": "request.auth != null || !resource.data"
+      }
+    },
+    "users": {
+      "read": "request.auth != null",
+      "write": "request.auth != null",
+      "$uid": {
+        "read": "request.auth != null && request.auth.uid == $uid",
+        "write": "request.auth != null && request.auth.uid == $uid"
+      }
+    }
+  }
+}
