@@ -12,6 +12,7 @@ import { doc, getDoc, setDoc, collection, addDoc } from 'firebase/firestore';
 
 interface FirebaseContextType {
   user: User | null;
+  isAdmin: boolean;
   loading: boolean;
   error: string | null;
   signInWithTest: () => Promise<void>;
@@ -21,6 +22,7 @@ interface FirebaseContextType {
 
 const FirebaseContext = createContext<FirebaseContextType>({
   user: null,
+  isAdmin: false,
   loading: true,
   error: null,
   signInWithTest: async () => {},
@@ -32,6 +34,7 @@ export const useFirebase = () => useContext(FirebaseContext);
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
@@ -100,8 +103,22 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   }, [initialized]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
+    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          // Check if user is admin
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          const userData = userDoc.data();
+          setIsAdmin(userData?.isAdmin === true);
+        } catch (error) {
+          console.error('Error checking admin status:', error);
+          setIsAdmin(false);
+        }
+        setUser(firebaseUser);
+      } else {
+        setUser(null);
+        setIsAdmin(false);
+      }
       setLoading(false);
     });
 
@@ -171,6 +188,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     <FirebaseContext.Provider
       value={{
         user,
+        isAdmin,
         loading,
         error,
         signInWithTest,

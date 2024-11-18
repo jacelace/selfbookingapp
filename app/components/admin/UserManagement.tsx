@@ -223,6 +223,65 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     }
   };
 
+  const handleAddSessions = async (userId: string, currentSessions: number) => {
+    try {
+      if (isSubmitting) return;
+      setIsSubmitting(true);
+
+      const sessionsToAdd = window.prompt('Enter number of sessions to add:', '1');
+      if (!sessionsToAdd) {
+        return; // User cancelled or entered empty string
+      }
+
+      const numSessions = parseInt(sessionsToAdd);
+      if (isNaN(numSessions) || numSessions <= 0) {
+        toast({
+          title: 'Error',
+          description: 'Please enter a valid number of sessions greater than 0',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const newTotal = currentSessions + numSessions;
+      const userRef = doc(db, 'users', userId);
+      
+      // Update Firestore
+      await updateDoc(userRef, {
+        remainingBookings: newTotal,
+        totalBookings: newTotal,
+        updatedAt: new Date()
+      });
+
+      // Update local state
+      setUsers((prevUsers) => 
+        prevUsers.map((user) => 
+          user.id === userId 
+            ? {
+                ...user,
+                remainingBookings: newTotal,
+                totalBookings: newTotal
+              }
+            : user
+        )
+      );
+
+      toast({
+        title: 'Success',
+        description: `Added ${numSessions} sessions. New total: ${newTotal}`,
+      });
+    } catch (error) {
+      console.error('Error adding sessions:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add sessions. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {pendingUsers.length > 0 && (
@@ -350,33 +409,47 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
-                      {user.status === 'pending' ? (
+                      {user.status === 'approved' && (
                         <Button
                           size="sm"
-                          onClick={() => handleApprovalChange(user.id, true)}
+                          variant="outline"
+                          onClick={() => handleAddSessions(user.id, user.remainingBookings || 0)}
                           disabled={isSubmitting}
-                          className="bg-green-600 hover:bg-green-700 text-white"
+                          className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
                         >
-                          Approve
+                          Add Sessions
                         </Button>
+                      )}
+                      {user.status === 'pending' ? (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => handleApprovalChange(user.id, true)}
+                            disabled={isSubmitting}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteUser(user.id)}
+                            disabled={isSubmitting}
+                          >
+                            Delete
+                          </Button>
+                        </>
                       ) : (
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleApprovalChange(user.id, false)}
                           disabled={isSubmitting}
+                          className="text-yellow-600 hover:bg-yellow-50"
                         >
-                          Unapprove
+                          Set Pending
                         </Button>
                       )}
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleDeleteUser(user.id)}
-                        disabled={isSubmitting}
-                      >
-                        Delete
-                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

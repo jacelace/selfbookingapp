@@ -10,7 +10,7 @@ import { collection, addDoc, updateDoc, Timestamp, doc, getDoc } from 'firebase/
 import { db, auth } from '../firebase/clientApp';
 import type { TimeString, RecurringOption } from '../types/shared';
 import LoadingSpinner from './LoadingSpinner';
-import { toast } from './ui/use-toast';
+import { useToast } from './ui/use-toast';
 
 const timeSlots: TimeString[] = [
   '10:00 AM', '11:00 AM', '12:00 PM',
@@ -23,6 +23,7 @@ export default function UserBookingForm() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleCreateBooking = async () => {
     if (!selectedTime) {

@@ -52,10 +52,12 @@ export default function Navbar() {
           <div className="flex items-center space-x-4">
             {user ? (
               <>
-                <Link href="/booking">
-                  <Button variant="ghost">My Bookings</Button>
-                </Link>
-                {user.email === 'admin@example.com' && (
+                {pathname !== '/booking' && (
+                  <Link href="/booking">
+                    <Button variant="ghost">My Bookings</Button>
+                  </Link>
+                )}
+                {user.email === 'admin@example.com' && pathname !== '/admin/dashboard' && (
                   <Link href="/admin/dashboard">
                     <Button variant="ghost">Admin Dashboard</Button>
                   </Link>

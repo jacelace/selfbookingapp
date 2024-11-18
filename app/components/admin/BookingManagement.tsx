@@ -311,7 +311,16 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
                       {booking.status}
                     </span>
                   </TableCell>
-                  <TableCell>{booking.recurring === 'none' ? 'One-time' : 'Recurring'}</TableCell>
+                  <TableCell>
+                    <span className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                      booking.recurring === 'weekly' 
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-800"
+                    )}>
+                      {booking.recurring === 'weekly' ? 'Weekly' : 'One-time'}
+                    </span>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
