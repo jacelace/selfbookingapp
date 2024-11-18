@@ -11,12 +11,14 @@ export interface Label {
 }
 
 export type TimeString = 
-  | '10:00 AM'
-  | '11:00 AM'
-  | '12:00 PM'
+  | '9:00 AM'
+  | '9:50 AM'
+  | '10:40 AM'
+  | '11:30 AM'
   | '1:00 PM'
-  | '2:00 PM'
-  | '3:00 PM';
+  | '1:50 PM'
+  | '2:40 PM'
+  | '3:30 PM';
 
 export type RecurringOption = 'none' | 'weekly';
 
@@ -50,13 +52,14 @@ export interface EnhancedBooking {
   userId: string;
   userName: string;
   userLabel: string;
+  userLabelColor: string;
   date: Timestamp;
   time: TimeString;
   recurring: RecurringOption;
   recurringCount?: number;
   status: BookingStatus;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
   createdBy?: string;
 }
 

@@ -5,6 +5,8 @@ const nextConfig = {
     config.externals = [...(config.externals || []), { canvas: "canvas" }];
     return config;
   },
+  staticPageGenerationTimeout: 120,
+  distDir: '.next',
 }
 
 export default nextConfig;

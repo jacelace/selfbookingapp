@@ -1,78 +1,126 @@
 # Technology Stack
 
-## Frontend
-- Next.js 14 (React Framework)
-- TypeScript
-- Tailwind CSS for styling
-- shadcn/ui for UI components
+## Frontend Framework
+- Next.js 14
+  - App Router architecture
+  - Server and Client Components
+  - TypeScript integration
+  - Built-in routing system
+  - API routes for backend functionality
 
-## Backend
-- Firebase Authentication for user management
-- Firebase Firestore for database
-- Firebase Cloud Functions for serverless operations
+## UI/Styling
+- Tailwind CSS
+  - Custom utility classes
+  - Responsive design system
+  - Dark mode support
+- shadcn/ui
+  - Customizable component library
+  - Accessible components
+  - Consistent styling patterns
+- Custom Components
+  - Enhanced Button variants
+  - LoadingSpinner
+  - Calendar integration
+  - Form components
 
 ## Authentication & Authorization
-- Firebase Authentication for user management
-- Custom role-based access control
-- Email verification through Firebase
+- Firebase Authentication
+  - Email/password authentication
+  - Custom claims for role management
+  - Session persistence
+  - Security rules
+- Custom Role System
+  - Admin role
+  - User role with approval workflow
+  - Session-based permissions
 
-## Database Schema
+## Database
+- Firebase Firestore
+  - NoSQL document database
+  - Real-time updates
+  - Secure data access
+  - Efficient querying
 
-### Users Collection
-```typescript
-interface User {
-  uid: string;
-  email: string;
-  displayName?: string;
-  isApproved: boolean;
-  role: 'admin' | 'user';
-  createdAt: Timestamp;
-  lastLogin: Timestamp;
-  bookingLimit?: number;
-}
-```
+### Collections Structure
+- users
+  - Personal information
+  - Role and status
+  - Booking limits
+  - Session tracking
+- bookings
+  - Appointment details
+  - User references
+  - Status tracking
+  - Time slot management
 
-### Bookings Collection
-```typescript
-interface Booking {
-  id: string;
-  userId: string;
-  startTime: Timestamp;
-  endTime: Timestamp;
-  status: 'pending' | 'confirmed' | 'cancelled';
-  type: 'regular' | 'recurring';
-  recurringId?: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  notes?: string;
-}
-```
-
-### RecurringBookings Collection
-```typescript
-interface RecurringBooking {
-  id: string;
-  userId: string;
-  dayOfWeek: number;
-  startTime: string; // HH:mm format
-  endTime: string; // HH:mm format
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  active: boolean;
-}
-```
+## State Management
+- React Context
+  - Firebase context for auth state
+  - User context for profile data
+- Local State
+  - Form state management
+  - UI state handling
 
 ## Development Tools
-- VS Code as IDE
-- Git for version control
-- ESLint for code linting
-- Prettier for code formatting
+- TypeScript
+  - Static type checking
+  - Enhanced IDE support
+  - Type definitions for all components
+- ESLint
+  - Code quality enforcement
+  - TypeScript integration
+- Prettier
+  - Code formatting
+  - Consistent style
 
 ## Testing
-- Jest for unit testing
-- React Testing Library for component testing
-- Firebase Emulator for local development
+- Jest
+  - Unit testing
+  - Component testing
+- React Testing Library
+  - Component integration tests
+  - User interaction testing
 
 ## Deployment
-- Vercel for frontend hosting
-- Firebase for backend services
+- Vercel (Frontend)
+  - Automatic deployments
+  - Edge functions support
+  - Analytics and monitoring
+- Firebase (Backend)
+  - Authentication services
+  - Database hosting
+  - Security rules deployment
+
+## Architecture Decisions
+
+### 1. Next.js App Router
+- Chosen for:
+  - Built-in TypeScript support
+  - Improved performance with React Server Components
+  - Simplified routing and layouts
+  - Better SEO capabilities
+
+### 2. Firebase Integration
+- Selected for:
+  - Comprehensive authentication system
+  - Real-time database capabilities
+  - Scalable infrastructure
+  - Cost-effective for initial deployment
+
+### 3. Component Architecture
+- Modular design
+- Reusable components
+- Clear separation of concerns
+- Type-safe props and state
+
+### 4. Styling Strategy
+- Tailwind CSS for utility-first approach
+- shadcn/ui for consistent component design
+- Custom variants for special cases
+- Responsive design principles
+
+### 5. Security Implementation
+- Firebase Authentication for user management
+- Custom approval workflow
+- Role-based access control
+- Secure data access patterns

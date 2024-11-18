@@ -1,195 +1,114 @@
 'use client';
 
-import { useState } from 'react';
-import { addDoc, collection, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/clientApp';
-import BookingCalendar from '../components/BookingCalendar';
 import { toast } from '../components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '../components/LoadingSpinner';
+import UserBookings from '../components/UserBookings';
+import { Card, CardContent } from '../components/ui/card';
 
-interface RecurringBookingInfo {
-  isRecurring: boolean;
-  weeks: number;
+interface UserData {
+  name: string;
+  email: string;
+  remainingBookings: number;
+  status?: string;
+  isApproved?: boolean;
+  role?: string;
 }
 
 export default function BookingPage() {
-  const [selectedDate, setSelectedDate] = useState<Date>();
-  const [selectedTime, setSelectedTime] = useState("10:00 AM");
-  const [recurringInfo, setRecurringInfo] = useState<RecurringBookingInfo>({
-    isRecurring: false,
-    weeks: 4
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const router = useRouter();
 
-  const handleDateSelect = (date: Date | undefined) => {
-    setSelectedDate(date);
-  };
-
-  const handleTimeSelect = (time: string) => {
-    setSelectedTime(time);
-  };
-
-  const createRecurringBookings = async (userId: string, userData: any) => {
-    const bookings = [];
-    let currentDate = new Date(selectedDate!);
-    let remainingBookings = userData.remainingBookings;
-
-    // Create bookings for the specified number of weeks
-    for (let i = 0; i < recurringInfo.weeks && remainingBookings > 0; i++) {
-      const bookingData = {
-        userId,
-        date: new Date(currentDate),
-        slot: selectedTime,
-        status: 'confirmed',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        isRecurring: true,
-        recurringGroupId: `${userId}-${currentDate.getTime()}-${selectedTime}`,
-      };
-
-      bookings.push(bookingData);
-      remainingBookings--;
-      
-      // Move to next week
-      currentDate.setDate(currentDate.getDate() + 7);
-    }
-
-    try {
-      // Create all bookings
-      const bookingRefs = await Promise.all(
-        bookings.map(booking => addDoc(collection(db, 'bookings'), booking))
-      );
-
-      // Update user's remaining bookings
-      await updateDoc(doc(db, 'users', userId), {
-        remainingBookings,
-        totalBookings: (userData.totalBookings || 0) + bookings.length,
-        lastBooking: {
-          id: bookingRefs[0].id,
-          date: selectedDate,
-          slot: selectedTime,
-          status: 'confirmed',
-          isRecurring: true,
-        },
-      });
-
-      return bookings.length;
-    } catch (error) {
-      console.error('Error creating recurring bookings:', error);
-      throw new Error('Failed to create recurring bookings');
-    }
-  };
-
-  const handleBookingSubmit = async () => {
-    if (!auth.currentUser || !selectedDate) {
-      toast({
-        title: 'Error',
-        description: 'Please sign in and select a date',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      // Check user's booking privileges and remaining sessions
-      const userRef = doc(db, 'users', auth.currentUser.uid);
-      const userSnap = await getDoc(userRef);
-      const userData = userSnap.data();
-
-      if (!userData?.isApproved) {
-        throw new Error('Your account is not approved for booking');
+  useEffect(() => {
+    const checkApprovalStatus = async () => {
+      if (!auth.currentUser) {
+        router.push('/');
+        return;
       }
 
-      if (userData.remainingBookings <= 0) {
-        throw new Error('You have no remaining booking sessions');
-      }
+      try {
+        console.log('Checking user status for:', auth.currentUser.uid);
+        const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+        const userDataFromDb = userDoc.data() as UserData;
+        console.log('User data:', userDataFromDb);
 
-      // Check if user has enough remaining sessions for recurring bookings
-      if (recurringInfo.isRecurring && userData.remainingBookings < recurringInfo.weeks) {
-        throw new Error(`You need at least ${recurringInfo.weeks} remaining sessions for recurring bookings`);
-      }
+        if (!userDataFromDb) {
+          console.log('No user data found');
+          toast({
+            title: "Error",
+            description: "User data not found",
+            variant: "destructive",
+          });
+          router.push('/');
+          return;
+        }
 
-      let bookingsCreated = 0;
+        // Check if user is approved - either by isApproved flag or role being 'user'
+        const isUserApproved = userDataFromDb.isApproved === true || userDataFromDb.role === 'user';
+        console.log('Is user approved:', isUserApproved);
 
-      if (recurringInfo.isRecurring) {
-        // Handle recurring bookings
-        bookingsCreated = await createRecurringBookings(auth.currentUser.uid, userData);
+        if (!isUserApproved) {
+          console.log('User not approved');
+          toast({
+            title: "Not Approved",
+            description: "Your account is pending approval.",
+            variant: "destructive",
+          });
+          router.push('/');
+          return;
+        }
+
+        setUserData(userDataFromDb);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error checking approval status:', error);
         toast({
-          title: 'Success',
-          description: `Created ${bookingsCreated} recurring bookings successfully`,
+          title: "Error",
+          description: "Failed to check approval status",
+          variant: "destructive",
         });
-      } else {
-        // Create single booking
-        const bookingData = {
-          userId: auth.currentUser.uid,
-          date: selectedDate,
-          slot: selectedTime,
-          status: 'confirmed',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          isRecurring: false,
-        };
-
-        const bookingRef = await addDoc(collection(db, 'bookings'), bookingData);
-
-        // Update user's remaining bookings and store last booking details
-        await updateDoc(userRef, {
-          remainingBookings: userData.remainingBookings - 1,
-          totalBookings: (userData.totalBookings || 0) + 1,
-          lastBooking: {
-            id: bookingRef.id,
-            date: selectedDate,
-            slot: selectedTime,
-            status: 'confirmed',
-            isRecurring: false,
-          },
-        });
-
-        bookingsCreated = 1;
-        toast({
-          title: 'Success',
-          description: 'Booking created successfully',
-        });
+        router.push('/');
       }
+    };
 
-      router.push('/booking/success');
-    } catch (error) {
-      console.error('Error creating booking:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create booking',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    checkApprovalStatus();
+  }, [router]);
 
-  if (isSubmitting) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <LoadingSpinner size={32} />
-          <p className="mt-4 text-lg text-gray-600">Creating your booking{recurringInfo.isRecurring ? 's' : ''}...</p>
-        </div>
+      <div className="flex justify-center items-center min-h-screen">
+        <LoadingSpinner />
       </div>
     );
   }
 
+  if (!userData) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <p className="text-center text-red-500">
+            Unable to load user data. Please try again.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <BookingCalendar
-        onDateSelect={handleDateSelect}
-        onTimeSelect={handleTimeSelect}
-        onBookingSubmit={handleBookingSubmit}
-        onRecurringChange={(isRecurring, weeks) => 
-          setRecurringInfo({ isRecurring, weeks })
-        }
-      />
+    <div className="container mx-auto p-4 space-y-6">
+      <h1 className="text-2xl font-bold mb-4">Booking Management</h1>
+      <div className="space-y-4">
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <p className="text-sm text-blue-800">
+            You have {userData.remainingBookings} booking sessions remaining
+          </p>
+        </div>
+        <UserBookings />
+      </div>
     </div>
   );
 }

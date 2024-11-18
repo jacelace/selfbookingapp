@@ -12,19 +12,18 @@ import { EnhancedUser } from '../types/shared';
 
 interface AdminBookingFormProps {
   selectedDate: Date;
-  selectedSlot: string;
   users: EnhancedUser[];
   onCancel: () => void;
 }
 
 const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
   selectedDate,
-  selectedSlot,
   users,
   onCancel,
 }) => {
   const [loading, setLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string>('');
+  const [selectedSlot, setSelectedSlot] = useState<string>('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [userSessions, setUserSessions] = useState<number>(0);
 
@@ -35,13 +34,21 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
     }
   }, [selectedUser, users]);
 
+  const timeSlots = [
+    '10:00 AM', '11:00 AM', '12:00 PM',
+    '1:00 PM', '2:00 PM', '3:00 PM'
+  ];
+
   const createRecurringBookings = async (userId: string, startDate: Date, slot: string, sessions: number) => {
+    const selectedUserData = users.find(u => u.id === userId);
     const bookings = [];
     let currentDate = new Date(startDate);
 
     for (let i = 0; i < sessions; i++) {
       bookings.push({
         userId,
+        userName: selectedUserData?.name || '',
+        userLabel: selectedUserData?.userLabel || '',
         date: new Date(currentDate),
         slot,
         status: 'confirmed',
@@ -67,17 +74,29 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
       return;
     }
 
+    if (!selectedSlot) {
+      toast({
+        title: 'Error',
+        description: 'Please select a time slot',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
     try {
+      console.log('Fetching user document:', selectedUser);
       const userRef = doc(db, 'users', selectedUser);
       const userSnap = await getDoc(userRef);
       const userData = userSnap.data();
+      console.log('User data:', userData);
 
       if (!userData) {
         throw new Error('User not found');
       }
 
       if (isRecurring) {
+        console.log('Creating recurring bookings...');
         if (userData.remainingBookings < 2) {
           throw new Error('Insufficient sessions for recurring bookings');
         }
@@ -88,13 +107,17 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
           selectedSlot,
           userData.remainingBookings
         );
+        console.log('Recurring bookings to create:', recurringBookings);
 
         // Create all recurring bookings
         for (const booking of recurringBookings) {
-          await addDoc(collection(db, 'bookings'), booking);
+          console.log('Adding booking:', booking);
+          const docRef = await addDoc(collection(db, 'bookings'), booking);
+          console.log('Booking added with ID:', docRef.id);
         }
 
         // Update user's remaining bookings
+        console.log('Updating user remaining bookings to 0');
         await updateDoc(userRef, {
           remainingBookings: 0,
           totalBookings: (userData.totalBookings || 0) + recurringBookings.length,
@@ -110,8 +133,12 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
           throw new Error('No remaining sessions');
         }
 
+        const selectedUserData = users.find(u => u.id === selectedUser);
+        console.log('Creating single booking...');
         await addDoc(collection(db, 'bookings'), {
           userId: selectedUser,
+          userName: selectedUserData?.name || '',
+          userLabel: selectedUserData?.userLabel || '',
           date: selectedDate,
           slot: selectedSlot,
           status: 'confirmed',
@@ -120,6 +147,7 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
         });
 
         // Update user's remaining bookings
+        console.log('Updating user remaining bookings');
         await updateDoc(userRef, {
           remainingBookings: userData.remainingBookings - 1,
           totalBookings: (userData.totalBookings || 0) + 1,
@@ -171,9 +199,24 @@ const AdminBookingForm: React.FC<AdminBookingFormProps> = ({
           <p className="font-medium">Selected Date:</p>
           <p>{selectedDate.toLocaleDateString()}</p>
         </div>
+        
         <div>
-          <p className="font-medium">Selected Time:</p>
-          <p>{selectedSlot}</p>
+          <p className="font-medium mb-2">Select Time:</p>
+          <Select
+            value={selectedSlot}
+            onValueChange={setSelectedSlot}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a time slot" />
+            </SelectTrigger>
+            <SelectContent>
+              {timeSlots.map((slot) => (
+                <SelectItem key={slot} value={slot}>
+                  {slot} (30 min)
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-center space-x-2">

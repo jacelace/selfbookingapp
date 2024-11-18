@@ -3,19 +3,21 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { FirebaseProvider } from "./FirebaseProvider";
 import ErrorBoundary from "./components/ErrorBoundary";
+import Navbar from "./components/Navbar";
+import { Toaster } from "./components/ui/toaster";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Self Booking App",
-  description: "Book your sessions easily",
+  title: "Therapy Session Booking",
+  description: "Book your therapy sessions easily",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
       <head>
@@ -25,7 +27,11 @@ export default function RootLayout({
       <body className={inter.className}>
         <ErrorBoundary>
           <FirebaseProvider>
-            {children}
+            <Navbar />
+            <main className="min-h-screen">
+              {children}
+            </main>
+            <Toaster />
           </FirebaseProvider>
         </ErrorBoundary>
       </body>

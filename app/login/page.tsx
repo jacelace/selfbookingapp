@@ -49,14 +49,13 @@ export default function LoginPage() {
       await signInWithTest();
       toast({
         title: 'Success',
-        description: 'Logged in as test admin',
+        description: 'Logged in as admin',
       });
       router.push('/admin/dashboard');
     } catch (err) {
-      console.error('Test login failed:', err);
       toast({
         title: 'Error',
-        description: error || 'Failed to login with test account',
+        description: error || 'Failed to login',
         variant: 'destructive',
       });
     } finally {
@@ -66,82 +65,69 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md mx-4">
+      <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl text-center">Admin Login</CardTitle>
-          <CardDescription className="text-center">
-            Use the test account below or sign in with your credentials
-          </CardDescription>
+          <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
+          <CardDescription className="text-center">Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-6">
-            <Button
-              type="button"
-              onClick={handleTestLogin}
-              className="w-full"
-              variant="outline"
-              disabled={loading}
-            >
-              {loading ? (
-                <LoadingSpinner size={16} />
-              ) : (
-                <>
-                  Sign in as Test Admin
-                  <span className="text-xs ml-2">
-                    ({TEST_CREDENTIALS.email})
-                  </span>
-                </>
-              )}
-            </Button>
-          </div>
-          
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">
-                Or continue with
-              </span>
-            </div>
-          </div>
-
           <form onSubmit={handleLogin} className="space-y-4">
-            <div>
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                Email
+              </label>
               <Input
+                id="email"
                 type="email"
-                placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full"
-                disabled={loading}
+                placeholder="Enter your email"
                 required
+                className="w-full"
               />
             </div>
-            <div>
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                Password
+              </label>
               <Input
+                id="password"
                 type="password"
-                placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full"
-                disabled={loading}
+                placeholder="Enter your password"
                 required
+                className="w-full"
               />
             </div>
-            {error && (
-              <div className="text-sm text-red-500">
-                {error}
-              </div>
-            )}
             <Button
               type="submit"
               className="w-full"
               disabled={loading}
             >
-              {loading ? <LoadingSpinner size={16} /> : 'Sign in'}
+              {loading ? <LoadingSpinner size="sm" /> : 'Sign In'}
             </Button>
           </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or</span>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={handleTestLogin}
+              className="w-full mt-4"
+              disabled={loading}
+            >
+              {loading ? <LoadingSpinner size="sm" /> : 'Sign In as Admin'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -1,31 +1,34 @@
 'use client';
 
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar } from '../ui/calendar';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Checkbox } from '../ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { collection, addDoc, updateDoc, Timestamp, doc } from 'firebase/firestore';
 import { db, auth } from '../../firebase/clientApp';
-import type { EnhancedBooking, EnhancedUser, TimeString, BookingStatus } from '../../types/shared';
+import type { EnhancedBooking, EnhancedUser, TimeString, BookingStatus, Label as LabelType } from '../../types/shared';
 import LoadingSpinner from '../LoadingSpinner';
 import { TEST_CREDENTIALS } from '../../lib/constants';
+import { toast } from '../ui/use-toast';
+import ColorLabel from '../ColorLabel';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
-const availableTimes: TimeString[] = [
-  '10:00 AM',
-  '11:00 AM',
-  '12:00 PM',
-  '1:00 PM',
-  '2:00 PM',
-  '3:00 PM'
+const timeSlots: TimeString[] = [
+  '10:00 AM', '11:00 AM', '12:00 PM',
+  '1:00 PM', '2:00 PM', '3:00 PM'
 ];
 
 interface BookingManagementProps {
   users: EnhancedUser[];
   bookings: EnhancedBooking[];
+  labels: LabelType[];
   setBookings: React.Dispatch<React.SetStateAction<EnhancedBooking[]>>;
   isSubmitting: boolean;
   setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
@@ -45,6 +48,7 @@ const formatDate = (date: Date | Timestamp | string) => {
 export const BookingManagement: React.FC<BookingManagementProps> = ({
   users,
   bookings,
+  labels,
   setBookings,
   isSubmitting,
   setIsSubmitting
@@ -52,13 +56,19 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
   // States
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<TimeString | ''>('');
+  const [selectedUser, setSelectedUser] = useState<string>('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [filterStatus, setFilterStatus] = useState<BookingStatus | 'all'>('all');
   const [error, setError] = useState<string | null>(null);
 
-  const handleAddBooking = async (userId: string) => {
+  const handleAddBooking = async () => {
     if (!selectedTime) {
       setError('Please select a time');
+      return;
+    }
+
+    if (!selectedUser) {
+      setError('Please select a user');
       return;
     }
 
@@ -71,8 +81,11 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
         throw new Error('Unauthorized: Only admins can add bookings');
       }
 
-      const user = users.find(u => u.id === userId);
+      const user = users.find(u => u.id === selectedUser);
       if (!user) throw new Error('User not found');
+
+      // Get user's label
+      const userLabel = labels.find(l => l.id === user.labelId);
 
       // Check if user has remaining sessions
       if (user.remainingBookings <= 0) {
@@ -80,115 +93,70 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
       }
 
       const now = Timestamp.now();
-      const newBooking: Omit<EnhancedBooking, 'id'> = {
-        userId,
+      console.log('Creating booking for user:', {
+        userId: selectedUser,
         userName: user.name,
-        userLabel: user.userLabel,
-        date: selectedDate.toISOString().split('T')[0],
-        time: selectedTime,
+        currentUser: currentUser.uid
+      });
+
+      const newBooking: Omit<EnhancedBooking, 'id'> = {
+        userId: selectedUser,
+        userName: user.name || '',
+        userLabel: userLabel?.name || '',
+        userLabelColor: userLabel?.color || '#808080',
+        date: Timestamp.fromDate(selectedDate),
+        time: selectedTime as TimeString,
         recurring: isRecurring ? 'weekly' : 'none',
-        recurringCount: isRecurring ? 1 : undefined,
+        ...(isRecurring && { recurringCount: 1 }),
         status: 'confirmed',
         createdAt: now,
         updatedAt: now,
         createdBy: currentUser.uid
       };
 
+      console.log('New booking data:', newBooking);
+
       // Create the booking
       const docRef = await addDoc(collection(db, 'bookings'), newBooking);
+      console.log('Created booking with ID:', docRef.id);
       const bookingWithId = { ...newBooking, id: docRef.id };
       
       // Update user's booking information
-      const userRef = doc(db, 'users', userId);
+      const userRef = doc(db, 'users', selectedUser);
       await updateDoc(userRef, {
         remainingBookings: user.remainingBookings - 1,
         totalBookings: (user.totalBookings || 0) + 1,
-        lastBooking: {
-          id: docRef.id,
-          date: selectedDate,
-          time: selectedTime,
-          status: 'confirmed',
-          isRecurring: isRecurring
-        },
-        updatedAt: now
       });
 
       // Update local state
       setBookings(prev => [...prev, bookingWithId]);
-      setSelectedTime('');
-      setIsRecurring(false);
-
-      console.log('Booking added successfully:', bookingWithId);
-    } catch (err) {
-      console.error('Error adding booking:', err);
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Failed to add booking. Please try again.');
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCancelBooking = async (bookingId: string, userId: string) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser || currentUser.email !== TEST_CREDENTIALS.email) {
-        throw new Error('Unauthorized: Only admins can cancel bookings');
-      }
-
-      const user = users.find(u => u.id === userId);
-      if (!user) throw new Error('User not found');
-
-      const now = Timestamp.now();
       
-      // Update booking status
-      const bookingRef = doc(db, 'bookings', bookingId);
-      await updateDoc(bookingRef, {
-        status: 'cancelled',
-        updatedAt: now,
-        cancelledBy: currentUser.uid,
-        cancelledAt: now
+      // Reset form
+      setSelectedTime('');
+      setSelectedUser('');
+      setIsRecurring(false);
+      
+      toast({
+        title: 'Success',
+        description: 'Booking created successfully',
       });
-
-      // Refund the user's booking session
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        remainingBookings: user.remainingBookings + 1,
-        updatedAt: now
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      setError(error instanceof Error ? error.message : 'Failed to create booking');
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to create booking',
+        variant: 'destructive',
       });
-
-      // Update local state
-      setBookings(prev => prev.map(booking => 
-        booking.id === bookingId 
-          ? { ...booking, status: 'cancelled' }
-          : booking
-      ));
-
-      console.log('Booking cancelled successfully');
-    } catch (err) {
-      console.error('Error cancelling booking:', err);
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Failed to cancel booking. Please try again.');
-      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Filter bookings based on status
   const filteredBookings = bookings.filter(booking => 
-    filterStatus === 'all' || booking.status === filterStatus
-  );
+    filterStatus === 'all' ? true : booking.status === filterStatus
+  ).sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
 
   return (
     <Card>
@@ -197,101 +165,161 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              className="rounded-md border"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* User Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select User</label>
+              <Select value={selectedUser} onValueChange={setSelectedUser}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select user" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} ({user.remainingBookings} sessions)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !selectedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    initialFocus
+                    disabled={(date) => 
+                      date < new Date() || // No past dates
+                      date.getDay() === 0 || date.getDay() === 6 || // No weekends
+                      date > new Date(new Date().setMonth(new Date().getMonth() + 3)) // Max 3 months ahead
+                    }
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Time Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select Time</label>
+              <Select value={selectedTime} onValueChange={(value) => setSelectedTime(value as TimeString)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select time" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timeSlots.map((slot) => (
+                    <SelectItem key={slot} value={slot}>
+                      {slot}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Recurring Option */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Recurring Booking</label>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="recurring"
+                  checked={isRecurring}
+                  onCheckedChange={(checked) => setIsRecurring(checked as boolean)}
+                />
+                <label htmlFor="recurring" className="text-sm font-medium">
+                  Make it recurring
+                </label>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <Select value={selectedTime} onValueChange={(value) => setSelectedTime(value as TimeString)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select time" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableTimes.map((time) => (
-                  <SelectItem key={time} value={time}>
-                    {time}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {error && (
+            <div className="text-red-500 text-sm mt-2">
+              {error}
+            </div>
+          )}
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="recurring"
-              checked={isRecurring}
-              onCheckedChange={(checked) => setIsRecurring(checked as boolean)}
-            />
-            <label htmlFor="recurring">Recurring weekly</label>
-          </div>
+          <Button
+            onClick={handleAddBooking}
+            disabled={isSubmitting || !selectedTime || !selectedUser}
+            className="mt-4"
+          >
+            {isSubmitting ? <LoadingSpinner /> : 'Create Booking'}
+          </Button>
+        </div>
 
-          {error && <p className="text-red-500">{error}</p>}
-
-          <div>
+        {/* Existing Bookings Table */}
+        <div className="mt-8">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Existing Bookings</h3>
             <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as BookingStatus | 'all')}>
-              <SelectTrigger>
+              <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="all">All Bookings</SelectItem>
                 <SelectItem value="confirmed">Confirmed</SelectItem>
                 <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
-          <div className="mt-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Label</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Time</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Type</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredBookings.map((booking) => (
+                <TableRow key={booking.id}>
+                  <TableCell>{booking.userName}</TableCell>
+                  <TableCell>
+                    <ColorLabel color={booking.userLabelColor || '#808080'}>
+                      {booking.userLabel || 'No Label'}
+                    </ColorLabel>
+                  </TableCell>
+                  <TableCell>{formatDate(booking.date)}</TableCell>
+                  <TableCell>{booking.time}</TableCell>
+                  <TableCell>
+                    <span className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                      booking.status === 'confirmed' && "bg-green-100 text-green-800",
+                      booking.status === 'cancelled' && "bg-red-100 text-red-800",
+                      booking.status === 'completed' && "bg-blue-100 text-blue-800"
+                    )}>
+                      {booking.status}
+                    </span>
+                  </TableCell>
+                  <TableCell>{booking.recurring === 'none' ? 'One-time' : 'Recurring'}</TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredBookings.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell>{booking.userName}</TableCell>
-                    <TableCell>{formatDate(booking.date)}</TableCell>
-                    <TableCell>{booking.time}</TableCell>
-                    <TableCell>{booking.status}</TableCell>
-                    <TableCell>
-                      <div className="space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleAddBooking(booking.userId)}
-                          disabled={isSubmitting}
-                        >
-                          {isSubmitting ? <LoadingSpinner /> : 'Book Again'}
-                        </Button>
-                        {booking.status === 'confirmed' && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleCancelBooking(booking.id, booking.userId)}
-                            disabled={isSubmitting}
-                          >
-                            Cancel
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       </CardContent>
     </Card>
   );
 };
+
+export default BookingManagement;

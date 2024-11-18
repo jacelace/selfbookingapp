@@ -1,33 +1,67 @@
 ## Current Objectives
 
-- **Implement New Button Variant**: 
-  - [x] Update `app/components/BookingForm.tsx` to use the new 'enhanced' button variant for the submit button.
-  - [ ] Update `app/components/AdminBookingForm.tsx` to use the new 'enhanced' button variant for the submit button.
-  - [ ] Update `app/components/EditBookingForm.tsx` to use the new 'enhanced' button variant for the submit button.
-  - [ ] Update `app/components/SignUp.tsx` to use the new 'enhanced' button variant for the submit button.
-  - [ ] Update `app/components/SignIn.tsx` to use the new 'enhanced' button variant for the submit button.
+### Implement Booking Management Features
+- [ ] Add booking cancellation functionality
+  - Update BookingForm.tsx to include cancellation option
+  - Add confirmation dialog
+  - Implement cancellation logic in Firebase
+  - Update user's remaining sessions
+
+- [ ] Add booking rescheduling functionality
+  - Create reschedule interface in BookingForm.tsx
+  - Implement date/time modification logic
+  - Add validation for new time slots
+  - Update Firebase booking records
+
+### Email System Enhancement
+- [ ] Implement email notifications for:
+  - Booking confirmations
+  - Cancellations
+  - Reminders
+  - Admin approvals
 
 ## Context
 
-The new 'enhanced' button variant provides a more visually appealing and interactive experience for users. This variant should be used for primary actions like submitting forms or confirming bookings to enhance the UI/UX.
+The booking system's core functionality is working, but it needs enhanced user management features. Users can currently book sessions, but cannot modify or cancel them. Additionally, the email notification system needs to be implemented to improve user communication.
 
 ## Next Steps
 
-1. **Update `app/components/AdminBookingForm.tsx`**:
-   - Replace the existing submit button with the new 'enhanced' variant.
+1. **Booking Cancellation Implementation**:
+   - Add cancellation button to UserBookings component
+   - Create CancellationDialog component
+   - Implement Firebase functions for cancellation
+   - Add session refund logic
 
-2. **Update `app/components/EditBookingForm.tsx`**:
-   - Replace the existing submit button with the new 'enhanced' variant.
+2. **Rescheduling System**:
+   - Design rescheduling interface
+   - Implement date/time selection for rescheduling
+   - Add validation for new time slots
+   - Create Firebase functions for booking updates
 
-3. **Update `app/components/SignUp.tsx`**:
-   - Replace the existing submit button with the new 'enhanced' variant.
+3. **Email Notification System**:
+   - Set up email service provider
+   - Create email templates
+   - Implement trigger points for notifications
+   - Add email preference management
 
-4. **Update `app/components/SignIn.tsx`**:
-   - Replace the existing submit button with the new 'enhanced' variant.
+4. **Testing and Review**:
+   - Test all new functionality
+   - Review user experience
+   - Validate Firebase rules
+   - Check email delivery and formatting
 
-5. **Test and Review**:
-   - Run the development server to ensure all changes are reflected correctly.
-   - Review the UI/UX to ensure consistency across the application.
+## Technical Considerations
 
-6. **Update Documentation**:
-   - Update `codebaseSummary.md` to reflect the changes made to the button components.
+- Ensure proper error handling for all new features
+- Maintain consistent UI/UX patterns
+- Update type definitions for new functionality
+- Consider rate limiting for booking modifications
+- Implement proper validation for all user actions
+
+## Documentation Updates Needed
+
+After implementing these features:
+- Update user documentation with new features
+- Add API documentation for new endpoints
+- Update technical documentation with new components
+- Document email templates and triggers
