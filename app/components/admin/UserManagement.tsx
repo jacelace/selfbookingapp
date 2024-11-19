@@ -16,6 +16,7 @@ import { TEST_CREDENTIALS } from '../../lib/constants';
 import { toast } from '../ui/use-toast';
 import { Checkbox } from '../ui/checkbox';
 import { Switch } from '../ui/switch';
+import { cn } from "@/lib/utils";
 
 interface UserManagementProps {
   users: EnhancedUser[];
@@ -283,181 +284,115 @@ export const UserManagement: React.FC<UserManagementProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      {pendingUsers.length > 0 && (
-        <Card className="border-yellow-200 bg-yellow-50">
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle className="text-yellow-800">Pending Approvals</CardTitle>
-                <p className="text-sm text-yellow-700 mt-1">
-                  {pendingUsers.length} user{pendingUsers.length !== 1 ? 's' : ''} waiting for approval
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                className="border-yellow-300 text-yellow-800 hover:bg-yellow-100"
-                onClick={() => setShowPendingOnly(!showPendingOnly)}
-              >
-                {showPendingOnly ? 'Show All Users' : 'Show Pending Only'}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {pendingUsers.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm border border-yellow-200"
-                >
-                  <div className="space-y-1">
-                    <p className="font-medium">{user.email}</p>
-                    <p className="text-sm text-gray-500">
-                      Signed up {new Date(user.createdAt).toLocaleDateString()} at{' '}
-                      {new Date(user.createdAt).toLocaleTimeString()}
-                    </p>
-                  </div>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="pending-filter"
+            checked={showPendingOnly}
+            onCheckedChange={setShowPendingOnly}
+            className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-blue-500 data-[state=checked]:to-purple-500"
+          />
+          <Label htmlFor="pending-filter" className="text-sm">Show pending users only</Label>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {showPendingOnly ? `${pendingUsers.length} pending` : `${users.length} total`} users
+        </p>
+      </div>
+
+      <div className="rounded-md border bg-gradient-to-br from-white to-gray-50">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[200px] text-xs">Name</TableHead>
+              <TableHead className="w-[150px] text-xs">Label</TableHead>
+              <TableHead className="w-[100px] text-xs">Sessions</TableHead>
+              <TableHead className="w-[100px] text-xs">Status</TableHead>
+              <TableHead className="text-xs">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {displayUsers.map((user) => (
+              <TableRow key={user.id} className="hover:bg-gray-50/50">
+                <TableCell className="text-sm">{user.name || user.email}</TableCell>
+                <TableCell>
+                  <Select
+                    value={user.labelId || ''}
+                    onValueChange={(value) => handleUpdateUserLabel(user.id, value)}
+                    disabled={isSubmitting}
+                  >
+                    <SelectTrigger className="h-8 w-[130px] text-sm">
+                      <SelectValue placeholder="Select label" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {labels.map((label) => (
+                        <SelectItem key={label.id} value={label.id} className="text-sm">
+                          {label.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell className="text-sm">
                   <div className="flex items-center space-x-2">
+                    <Input
+                      type="number"
+                      value={user.sessions || 0}
+                      onChange={(e) => handleUpdateUserSessions(user.id, parseInt(e.target.value))}
+                      className="h-8 w-16 text-sm"
+                      min="0"
+                    />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className={cn(
+                    "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
+                    user.status === 'approved' && "bg-green-100 text-green-700",
+                    user.status === 'pending' && "bg-yellow-100 text-yellow-700",
+                    user.status === 'rejected' && "bg-red-100 text-red-700"
+                  )}>
+                    {user.status}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    {user.status === 'pending' && (
+                      <>
+                        <Button
+                          onClick={() => handleApproveUser(user.id)}
+                          disabled={isSubmitting}
+                          size="sm"
+                          className="h-7 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-xs"
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          onClick={() => handleRejectUser(user.id)}
+                          disabled={isSubmitting}
+                          variant="destructive"
+                          size="sm"
+                          className="h-7 text-xs bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600"
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    )}
                     <Button
-                      size="sm"
-                      onClick={() => handleApprovalChange(user.id, true)}
-                      disabled={isSubmitting}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      Approve & Set Sessions
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
                       onClick={() => handleDeleteUser(user.id)}
                       disabled={isSubmitting}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                     >
                       Delete
                     </Button>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>All Users</CardTitle>
-              <p className="text-sm text-gray-500 mt-1">
-                {users.length} total user{users.length !== 1 ? 's' : ''} •{' '}
-                {pendingUsers.length} pending •{' '}
-                {users.filter(user => user.status === 'approved').length} approved
-              </p>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Status</TableHead>
-                <TableHead>Name/Email</TableHead>
-                <TableHead>Sessions</TableHead>
-                <TableHead>Signed Up</TableHead>
-                <TableHead>Actions</TableHead>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {displayUsers.map((user) => (
-                <TableRow 
-                  key={user.id}
-                  className={user.status === 'pending' ? 'bg-yellow-50' : ''}
-                >
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          user.status === 'pending' ? 'bg-yellow-400' : 'bg-green-400'
-                        }`}
-                      />
-                      <span className={`text-sm font-medium ${
-                        user.status === 'pending' ? 'text-yellow-600' : 'text-green-600'
-                      }`}>
-                        {user.status === 'pending' ? 'Pending' : 'Approved'}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <p className="font-medium">{user.name || 'No name'}</p>
-                      <p className="text-sm text-gray-500">{user.email}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {user.status === 'approved' ? (
-                      <div className="text-sm">
-                        <span className="font-medium">{user.remainingBookings}</span>
-                        <span className="text-gray-500"> remaining</span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-500">Not allocated</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm text-gray-500">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {user.status === 'approved' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleAddSessions(user.id, user.remainingBookings || 0)}
-                          disabled={isSubmitting}
-                          className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
-                        >
-                          Add Sessions
-                        </Button>
-                      )}
-                      {user.status === 'pending' ? (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => handleApprovalChange(user.id, true)}
-                            disabled={isSubmitting}
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDeleteUser(user.id)}
-                            disabled={isSubmitting}
-                          >
-                            Delete
-                          </Button>
-                        </>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleApprovalChange(user.id, false)}
-                          disabled={isSubmitting}
-                          className="text-yellow-600 hover:bg-yellow-50"
-                        >
-                          Set Pending
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };

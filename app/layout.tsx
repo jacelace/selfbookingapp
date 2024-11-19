@@ -2,10 +2,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { FirebaseProvider } from "./FirebaseProvider";
+import { Toaster } from "./components/ui/toaster";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Navbar from "./components/Navbar";
-import { Toaster } from "./components/ui/toaster";
-import { ToastProvider } from "./providers/ToastProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,17 +20,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+      </head>
+      <body className={`${inter.className} antialiased`} suppressHydrationWarning>
         <ErrorBoundary>
-          <ToastProvider>
-            <FirebaseProvider>
+          <FirebaseProvider>
+            <div className="relative min-h-screen bg-background font-sans antialiased">
               <Navbar />
-              <main className="min-h-screen">
-                {children}
-              </main>
+              <div className="relative flex min-h-screen flex-col">
+                <div className="flex-1">
+                  {children}
+                </div>
+              </div>
               <Toaster />
-            </FirebaseProvider>
-          </ToastProvider>
+            </div>
+          </FirebaseProvider>
         </ErrorBoundary>
       </body>
     </html>

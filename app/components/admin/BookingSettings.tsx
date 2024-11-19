@@ -65,53 +65,66 @@ export const BookingSettings: React.FC = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Booking Settings</CardTitle>
+    <Card className="w-full max-w-md">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-lg">Booking Settings</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <label htmlFor="timeLimit" className="text-sm font-medium">
-              Booking Time Limit (hours)
-            </label>
-            <Input
-              id="timeLimit"
-              type="number"
-              min="1"
-              max="168"
-              value={bookingTimeLimit}
-              onChange={(e) => setBookingTimeLimit(Number(e.target.value))}
-              className="w-full"
-            />
-            <p className="text-sm text-gray-500">
-              Users can only make appointments up to this many hours in advance
-            </p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="timeLimit" className="text-sm font-medium">
+                Booking Time Limit
+              </label>
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="timeLimit"
+                  type="number"
+                  min="1"
+                  max="168"
+                  value={bookingTimeLimit}
+                  onChange={(e) => setBookingTimeLimit(Number(e.target.value))}
+                  className="h-8"
+                />
+                <span className="text-sm text-gray-500">hrs</span>
+              </div>
+              <p className="text-xs text-gray-500">
+                Maximum hours in advance for bookings
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="cancelTimeLimit" className="text-sm font-medium">
+                Cancel Time Limit
+              </label>
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="cancelTimeLimit"
+                  type="number"
+                  min="1"
+                  max={bookingTimeLimit}
+                  value={cancelTimeLimit}
+                  onChange={(e) => setCancelTimeLimit(Number(e.target.value))}
+                  className="h-8"
+                />
+                <span className="text-sm text-gray-500">hrs</span>
+              </div>
+              <p className="text-xs text-gray-500">
+                Hours required before cancellation
+              </p>
+            </div>
           </div>
 
-          <Separator className="my-4" />
-
-          <div className="space-y-4">
-            <label htmlFor="cancelTimeLimit" className="text-sm font-medium">
-              Cancellation Time Limit (hours)
-            </label>
-            <Input
-              id="cancelTimeLimit"
-              type="number"
-              min="1"
-              max="168"
-              value={cancelTimeLimit}
-              onChange={(e) => setCancelTimeLimit(Number(e.target.value))}
-              className="w-full"
-            />
-            <p className="text-sm text-gray-500">
-              Users must cancel their appointments at least this many hours before the scheduled time
-            </p>
+          <div className="flex justify-end pt-2">
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+              size="sm"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+            >
+              {isLoading ? 'Saving...' : 'Save Changes'}
+            </Button>
           </div>
-
-          <Button type="submit" disabled={isLoading} className="w-full">
-            {isLoading ? 'Saving...' : 'Save Settings'}
-          </Button>
         </form>
       </CardContent>
     </Card>

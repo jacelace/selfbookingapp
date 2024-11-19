@@ -1,9 +1,8 @@
 'use client';
 
-import * as React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Users, Calendar, Tag, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { collection, query, doc, getDoc, setDoc, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase/clientApp';
@@ -15,9 +14,11 @@ import { LabelManagement } from './admin/LabelManagement';
 import { BookingManagement } from './admin/BookingManagement';
 import { BookingCalendar } from './admin/BookingCalendar';
 import { CreateUserForm } from './admin/CreateUserForm';
-import { BookingSettings } from './admin/BookingSettings';
 import { toast } from './ui/use-toast';
 import { useFirebase } from '../FirebaseProvider';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Separator } from './ui/separator';
 
 const AdminDashboard: React.FC = () => {
   // Data states
@@ -32,6 +33,14 @@ const AdminDashboard: React.FC = () => {
   
   // Firebase state
   const { user, isAdmin, loading: authLoading } = useFirebase();
+
+  // Computed values
+  const totalUsers = users.length;
+  const pendingUsers = users.filter(user => !user.isApproved).length;
+  const totalBookings = bookings.length;
+  const upcomingBookings = bookings.filter(booking => 
+    booking.date >= new Date().toISOString().split('T')[0]
+  ).length;
 
   // Clear error after 5 seconds
   useEffect(() => {
@@ -112,14 +121,15 @@ const AdminDashboard: React.FC = () => {
         try {
           const updatedBookings = snapshot.docs.map(doc => {
             const data = doc.data();
+            // Ensure all timestamp fields are properly handled
             return {
               ...data,
               id: doc.id,
-              date: data.date,
-              createdAt: data.createdAt || Timestamp.now(),
-              updatedAt: data.updatedAt || Timestamp.now()
-            };
-          }) as EnhancedBooking[];
+              date: data.date instanceof Timestamp ? data.date : Timestamp.fromDate(new Date(data.date)),
+              createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(new Date(data.createdAt)),
+              updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt : Timestamp.fromDate(new Date(data.updatedAt))
+            } as EnhancedBooking;
+          });
           
           setBookings(updatedBookings);
           if (loading) setLoading(false);
@@ -251,86 +261,163 @@ const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+    <div className="container mx-auto p-4 space-y-4">
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Admin Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Manage your therapy booking system</p>
+        </div>
         <Link href="/">
-          <Button variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50">
+            <ArrowLeft className="mr-2 h-3 w-3" />
             Back to Home
           </Button>
         </Link>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <div className="bg-red-50 border border-red-400 text-red-700 px-3 py-2 rounded-lg text-sm" role="alert">
           <strong className="font-bold">Error!</strong>
           <span className="block sm:inline"> {error}</span>
         </div>
       )}
 
-      <div className="space-y-6">
-        <BookingSettings />
-        <div className="grid gap-8">
-          {!loading && (
-            <>
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <h2 className="text-xl font-semibold">Create New User</h2>
-                  <CreateUserForm 
-                    labels={labels}
-                    isSubmitting={isSubmitting}
-                    setIsSubmitting={setIsSubmitting}
-                    onSuccess={() => {
-                      toast({
-                        title: 'Success',
-                        description: 'User created successfully',
-                      });
-                    }}
-                  />
-                </div>
-                <div className="space-y-4">
-                  <h2 className="text-xl font-semibold">Booking Calendar</h2>
-                  <BookingCalendar bookings={bookings} />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">User Management</h2>
-                <UserManagement 
-                  users={users}
-                  labels={labels}
-                  setUsers={setUsers}
-                  isSubmitting={isSubmitting}
-                  setIsSubmitting={setIsSubmitting}
-                />
-              </div>
-
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Label Management</h2>
-                <LabelManagement 
-                  labels={labels}
-                  setLabels={setLabels}
-                  isSubmitting={isSubmitting}
-                  setIsSubmitting={setIsSubmitting}
-                />
-              </div>
-
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Booking Management</h2>
-                <BookingManagement
-                  users={users}
-                  bookings={bookings}
-                  labels={labels}
-                  setBookings={setBookings}
-                  isSubmitting={isSubmitting}
-                  setIsSubmitting={setIsSubmitting}
-                />
-              </div>
-            </>
-          )}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-none">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <Users className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{totalUsers}</div>
+            <p className="text-xs text-blue-600/80">
+              {pendingUsers} pending approval
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-none">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+            <BookOpen className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{totalBookings}</div>
+            <p className="text-xs text-purple-600/80">
+              {upcomingBookings} upcoming
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-pink-50 to-rose-50 border-none">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Labels</CardTitle>
+            <Tag className="h-4 w-4 text-pink-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-pink-600">{labels.length}</div>
+            <p className="text-xs text-pink-600/80">
+              Active categories
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-rose-50 to-orange-50 border-none">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Calendar</CardTitle>
+            <Calendar className="h-4 w-4 text-rose-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-rose-600">{upcomingBookings}</div>
+            <p className="text-xs text-rose-600/80">
+              Upcoming sessions
+            </p>
+          </CardContent>
+        </Card>
       </div>
+
+      <Tabs defaultValue="users" className="space-y-4">
+        <TabsList className="bg-gradient-to-r from-blue-100/50 to-purple-100/50 p-1">
+          <TabsTrigger value="users" className="text-lg font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">Users</TabsTrigger>
+          <TabsTrigger value="bookings" className="text-lg font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">Bookings</TabsTrigger>
+          <TabsTrigger value="labels" className="text-lg font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">Labels</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="users" className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Create New User</CardTitle>
+                <CardDescription className="text-sm">Add a new user to the system</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-2">
+                <CreateUserForm 
+                  labels={labels}
+                  isSubmitting={isSubmitting}
+                  setIsSubmitting={setIsSubmitting}
+                  onSuccess={() => {
+                    toast({
+                      title: 'Success',
+                      description: 'User created successfully',
+                    });
+                  }}
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Booking Calendar</CardTitle>
+                <CardDescription className="text-sm">View upcoming sessions</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-2">
+                <BookingCalendar bookings={bookings} />
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">User Management</CardTitle>
+              <CardDescription className="text-sm">Manage existing users and their sessions</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-2">
+              <UserManagement 
+                users={users}
+                labels={labels}
+                setUsers={setUsers}
+                isSubmitting={isSubmitting}
+                setIsSubmitting={setIsSubmitting}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="bookings" className="space-y-4">
+          <BookingManagement
+            users={users}
+            bookings={bookings}
+            labels={labels}
+            setBookings={setBookings}
+            isSubmitting={isSubmitting}
+            setIsSubmitting={setIsSubmitting}
+          />
+        </TabsContent>
+
+        <TabsContent value="labels">
+          <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Label Management</CardTitle>
+              <CardDescription className="text-sm">Manage therapy categories and labels</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-2">
+              <LabelManagement 
+                labels={labels}
+                setLabels={setLabels}
+                isSubmitting={isSubmitting}
+                setIsSubmitting={setIsSubmitting}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

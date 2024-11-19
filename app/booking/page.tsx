@@ -25,14 +25,15 @@ export default function BookingPage() {
 
   useEffect(() => {
     const checkApprovalStatus = async () => {
-      if (!auth.currentUser) {
+      const currentUser = auth?.currentUser;
+      if (!currentUser) {
         router.push('/');
         return;
       }
 
       try {
-        console.log('Checking user status for:', auth.currentUser.uid);
-        const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+        console.log('Checking user status for:', currentUser.uid);
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
         const userDataFromDb = userDoc.data() as UserData;
         console.log('User data:', userDataFromDb);
 

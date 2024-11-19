@@ -3,16 +3,17 @@
 import * as React from 'react';
 import { useState } from 'react';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Checkbox } from '../ui/checkbox';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { X } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { collection, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../firebase/clientApp';
 import type { Label as LabelType } from '../../types/shared';
 import ColorLabel from '../ColorLabel';
 import LoadingSpinner from '../LoadingSpinner';
 import { TEST_CREDENTIALS } from '../../lib/constants';
+import { toast } from '../ui/use-toast';
 
 interface LabelManagementProps {
   labels: LabelType[];
@@ -28,12 +29,13 @@ export const LabelManagement: React.FC<LabelManagementProps> = ({
   setIsSubmitting
 }) => {
   // Form states
-  const [newLabelName, setNewLabelName] = useState('');
-  const [newLabelColor, setNewLabelColor] = useState('#000000');
+  const [newLabel, setNewLabel] = useState<LabelType>({ name: '', color: '#000000', isDefault: false });
   const [error, setError] = useState<string | null>(null);
 
-  const handleAddLabel = async () => {
-    if (!newLabelName || !newLabelColor) {
+  const handleCreateLabel = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!newLabel.name || !newLabel.color) {
       setError('Please fill in all fields');
       return;
     }
@@ -50,9 +52,7 @@ export const LabelManagement: React.FC<LabelManagementProps> = ({
 
       // Create label document
       const labelData = {
-        name: newLabelName,
-        color: newLabelColor,
-        isDefault: false,
+        ...newLabel,
         createdAt: new Date().toISOString(),
         createdBy: currentUser.uid
       };
@@ -69,8 +69,7 @@ export const LabelManagement: React.FC<LabelManagementProps> = ({
       setLabels(prevLabels => [...prevLabels, { ...labelData, id: docRef.id }]);
 
       // Reset form
-      setNewLabelName('');
-      setNewLabelColor('#000000');
+      setNewLabel({ name: '', color: '#000000', isDefault: false });
 
       console.log('Label added successfully:', labelData);
     } catch (err) {
@@ -119,68 +118,110 @@ export const LabelManagement: React.FC<LabelManagementProps> = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Label Management</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="labelName">Label Name</Label>
-            <Input
-              id="labelName"
-              value={newLabelName}
-              onChange={(e) => setNewLabelName(e.target.value)}
-              placeholder="Enter label name"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="labelColor">Label Color</Label>
-            <Input
-              id="labelColor"
-              type="color"
-              value={newLabelColor}
-              onChange={(e) => setNewLabelColor(e.target.value)}
-            />
-          </div>
-          {error && <p className="text-red-500">{error}</p>}
-          <Button onClick={handleAddLabel} disabled={isSubmitting}>
-            {isSubmitting ? <LoadingSpinner /> : 'Add Label'}
-          </Button>
-        </div>
+    <div className="space-y-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg">Create Label</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleCreateLabel} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="name" className="text-sm font-medium">
+                  Label Name
+                </label>
+                <Input
+                  id="name"
+                  value={newLabel.name}
+                  onChange={(e) => setNewLabel({ ...newLabel, name: e.target.value })}
+                  className="h-8"
+                  placeholder="Enter label name"
+                />
+              </div>
 
-        <div className="mt-8">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Color</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {labels.map((label) => (
-                <TableRow key={label.id}>
-                  <TableCell>{label.name}</TableCell>
-                  <TableCell>
-                    <ColorLabel color={label.color} />
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteLabel(label.id)}
-                      disabled={isSubmitting || label.isDefault}
-                    >
-                      Delete
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              <div className="space-y-2">
+                <label htmlFor="color" className="text-sm font-medium">
+                  Color
+                </label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    id="color"
+                    type="color"
+                    value={newLabel.color}
+                    onChange={(e) => setNewLabel({ ...newLabel, color: e.target.value })}
+                    className="h-8 w-16 p-1"
+                  />
+                  <Input
+                    value={newLabel.color}
+                    onChange={(e) => setNewLabel({ ...newLabel, color: e.target.value })}
+                    className="h-8 flex-1"
+                    placeholder="#000000"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isDefault"
+                checked={newLabel.isDefault}
+                onCheckedChange={(checked) => setNewLabel({ ...newLabel, isDefault: checked as boolean })}
+              />
+              <label htmlFor="isDefault" className="text-sm">
+                Set as default label
+              </label>
+            </div>
+
+            <div className="flex justify-end">
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || !newLabel.name || !newLabel.color}
+                size="sm"
+                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+              >
+                {isSubmitting ? <LoadingSpinner /> : 'Create Label'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <div className="mt-6">
+        <h3 className="text-lg font-medium mb-4">Existing Labels</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {labels.map((label) => (
+            <Card key={label.id} className="relative group">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div
+                      className="w-4 h-4 rounded-full"
+                      style={{ backgroundColor: label.color }}
+                    />
+                    <span className="font-medium">{label.name}</span>
+                  </div>
+                  {label.isDefault && (
+                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                      Default
+                    </span>
+                  )}
+                </div>
+
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteLabel(label.id)}
+                    className="h-7 px-2 hover:bg-red-50 hover:text-red-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

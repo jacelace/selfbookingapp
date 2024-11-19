@@ -1,14 +1,12 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, createUserWithEmailAndPassword } from 'firebase/auth';
+import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase/clientApp';
 import { Card } from './components/ui/card';
-import { Button } from './components/ui/button';
 import LoadingSpinner from './components/LoadingSpinner';
 import { TEST_CREDENTIALS } from './lib/constants';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, addDoc } from 'firebase/firestore';
 
 interface FirebaseContextType {
   user: User | null;
@@ -20,7 +18,7 @@ interface FirebaseContextType {
   logout: () => Promise<void>;
 }
 
-const FirebaseContext = createContext<FirebaseContextType>({
+const defaultContext: FirebaseContextType = {
   user: null,
   isAdmin: false,
   loading: true,
@@ -28,158 +26,108 @@ const FirebaseContext = createContext<FirebaseContextType>({
   signInWithTest: async () => {},
   signInWithCredentials: async () => {},
   logout: async () => {},
-});
+};
 
-export const useFirebase = () => useContext(FirebaseContext);
+const FirebaseContext = createContext<FirebaseContextType>(defaultContext);
+
+export const useFirebase = () => {
+  return useContext(FirebaseContext);
+};
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [initialized, setInitialized] = useState(false);
+  const [state, setState] = useState<Omit<FirebaseContextType, 'signInWithTest' | 'signInWithCredentials' | 'logout'>>({
+    user: null,
+    isAdmin: false,
+    loading: true,
+    error: null,
+  });
 
-  // Initialize test user if needed
-  const initializeTestUser = async () => {
-    try {
-      console.log('Initializing test user...');
-      // Try to sign in first to check if user exists
-      try {
-        await signInWithEmailAndPassword(
-          auth,
-          TEST_CREDENTIALS.email,
-          TEST_CREDENTIALS.password
-        );
-        console.log('Test user exists, signing out...');
-        await signOut(auth);
-      } catch (err: any) {
-        console.log('Sign-in attempt failed:', err.code);
-        // If user doesn't exist, create it
-        if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found') {
-          console.log('Creating test user...');
-          const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            TEST_CREDENTIALS.email,
-            TEST_CREDENTIALS.password
-          );
-
-          // Create default label if it doesn't exist
-          const labelsRef = collection(db, 'labels');
-          const defaultLabel = {
-            name: 'Default',
-            color: '#808080',
-            isDefault: true,
-            createdAt: new Date().toISOString()
-          };
-          await addDoc(labelsRef, defaultLabel);
-
-          // Create user document in Firestore
-          await setDoc(doc(db, 'users', userCredential.user.uid), {
-            email: TEST_CREDENTIALS.email,
-            name: 'Admin',
-            isAdmin: true,
-            role: 'admin',
-            createdAt: new Date().toISOString()
-          });
-
-          console.log('Test user created successfully');
-          await signOut(auth);
-        }
-      }
-    } catch (error) {
-      console.error('Error in initializeTestUser:', error);
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      setState(prev => ({ ...prev, loading: false }));
+      return;
     }
-  };
 
-  useEffect(() => {
-    const initialize = async () => {
-      if (!initialized) {
-        await initializeTestUser();
-        setInitialized(true);
-      }
-    };
-
-    initialize();
-  }, [initialized]);
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-      if (firebaseUser) {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
         try {
-          // Check if user is admin
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
           const userData = userDoc.data();
-          setIsAdmin(userData?.isAdmin === true);
+          setState({
+            user,
+            isAdmin: userData?.role === 'admin',
+            loading: false,
+            error: null,
+          });
         } catch (error) {
-          console.error('Error checking admin status:', error);
-          setIsAdmin(false);
+          console.error('Error fetching user data:', error);
+          setState({
+            user,
+            isAdmin: false,
+            loading: false,
+            error: 'Error fetching user data',
+          });
         }
-        setUser(firebaseUser);
       } else {
-        setUser(null);
-        setIsAdmin(false);
+        setState({
+          user: null,
+          isAdmin: false,
+          loading: false,
+          error: null,
+        });
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
   const signInWithTest = async () => {
-    console.log('Attempting test sign in...');
-    setError(null);
     try {
-      const result = await signInWithEmailAndPassword(
-        auth,
-        TEST_CREDENTIALS.email,
-        TEST_CREDENTIALS.password
-      );
-      console.log('Test sign in successful:', result.user.email);
-    } catch (err) {
-      console.error('Test sign in error:', err);
-      setError('Failed to login with test credentials');
-      throw err;
+      setState(prev => ({ ...prev, loading: true, error: null }));
+      await signInWithEmailAndPassword(auth, TEST_CREDENTIALS.email, TEST_CREDENTIALS.password);
+    } catch (error) {
+      console.error('Test sign-in error:', error);
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Error signing in with test credentials',
+      }));
     }
   };
 
   const signInWithCredentials = async (email: string, password: string) => {
-    setError(null);
     try {
+      setState(prev => ({ ...prev, loading: true, error: null }));
       await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      console.error('Login error:', err);
-      setError('Invalid email or password');
-      throw err;
+    } catch (error) {
+      console.error('Sign-in error:', error);
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Invalid email or password',
+      }));
+      throw error;
     }
   };
 
   const logout = async () => {
-    setError(null);
     try {
+      setState(prev => ({ ...prev, loading: true, error: null }));
       await signOut(auth);
-    } catch (err) {
-      console.error('Logout error:', err);
-      setError('Failed to logout');
-      throw err;
+    } catch (error) {
+      console.error('Sign-out error:', error);
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Error signing out',
+      }));
     }
   };
 
-  if (loading) {
+  if (state.loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <Card className="flex h-screen items-center justify-center">
         <LoadingSpinner />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="p-6 max-w-md mx-auto mt-8">
-        <div className="text-center">
-          <h2 className="text-lg font-semibold text-red-600 mb-2">Error</h2>
-          <p className="text-sm text-gray-600 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()}>Try Again</Button>
-        </div>
       </Card>
     );
   }
@@ -187,10 +135,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   return (
     <FirebaseContext.Provider
       value={{
-        user,
-        isAdmin,
-        loading,
-        error,
+        ...state,
         signInWithTest,
         signInWithCredentials,
         logout,
