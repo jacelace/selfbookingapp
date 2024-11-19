@@ -7,7 +7,9 @@ import { toast } from '../components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '../components/LoadingSpinner';
 import UserBookings from '../components/UserBookings';
-import { Card, CardContent } from '../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Calendar, Clock, User } from 'lucide-react';
 
 interface UserData {
   name: string;
@@ -16,6 +18,9 @@ interface UserData {
   status?: string;
   isApproved?: boolean;
   role?: string;
+  labelId?: string;
+  labelName?: string;
+  labelColor?: string;
 }
 
 export default function BookingPage() {
@@ -63,6 +68,16 @@ export default function BookingPage() {
           return;
         }
 
+        // If there's a labelId, fetch the label details
+        if (userDataFromDb.labelId) {
+          const labelDoc = await getDoc(doc(db, 'labels', userDataFromDb.labelId));
+          if (labelDoc.exists()) {
+            const labelData = labelDoc.data();
+            userDataFromDb.labelName = labelData.name;
+            userDataFromDb.labelColor = labelData.color;
+          }
+        }
+
         setUserData(userDataFromDb);
         setLoading(false);
       } catch (error) {
@@ -89,27 +104,92 @@ export default function BookingPage() {
 
   if (!userData) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-center text-red-500">
-            Unable to load user data. Please try again.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-red-500">
+              Unable to load user data. Please try again.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-2xl font-bold mb-4">Booking Management</h1>
-      <div className="space-y-4">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <p className="text-sm text-blue-800">
-            You have {userData.remainingBookings} booking sessions remaining
-          </p>
+    <div className="container mx-auto p-6 space-y-6 mt-16">
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Booking Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Manage your therapy sessions</p>
         </div>
-        <UserBookings />
       </div>
+
+      {/* User Info Section */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">User Profile</CardTitle>
+            <User className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-700">{userData.name}</div>
+            <p className="text-xs text-blue-600/80">{userData.email}</p>
+            {userData.labelName && (
+              <div className="mt-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                   style={{ backgroundColor: userData.labelColor + '20', color: userData.labelColor }}>
+                {userData.labelName}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-50 to-pink-50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Remaining Sessions</CardTitle>
+            <Calendar className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-700">{userData.remainingBookings}</div>
+            <p className="text-xs text-purple-600/80">Available bookings</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-pink-50 to-rose-50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Next Session</CardTitle>
+            <Clock className="h-4 w-4 text-pink-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-pink-700">-</div>
+            <p className="text-xs text-pink-600/80">Upcoming appointment</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bookings Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Bookings</CardTitle>
+          <CardDescription>
+            Manage your therapy sessions and appointments
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="upcoming" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+              <TabsTrigger value="past">Past Sessions</TabsTrigger>
+            </TabsList>
+            <TabsContent value="upcoming" className="space-y-4">
+              <UserBookings />
+            </TabsContent>
+            <TabsContent value="past" className="space-y-4">
+              <UserBookings showPast />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -18,15 +18,13 @@ export default function Navbar() {
     }
   };
 
-  const baseNavClasses = "fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700";
-
   if (loading) {
     return (
-      <nav className={baseNavClasses}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
+      <nav className="fixed top-0 left-0 right-0 z-50 h-16 border-b bg-white/75 backdrop-blur-sm">
+        <div className="container mx-auto h-full px-4">
+          <div className="flex h-full items-center justify-between">
             <div className="flex items-center">
-              <span className="text-xl font-semibold text-gray-900 dark:text-white">
+              <span className="text-xl font-semibold text-gray-900">
                 Therapy Booking
               </span>
             </div>
@@ -40,38 +38,23 @@ export default function Navbar() {
   }
 
   return (
-    <nav className={baseNavClasses}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+    <nav className="fixed top-0 left-0 right-0 z-50 h-16 border-b bg-white/75 backdrop-blur-sm">
+      <div className="container mx-auto h-full px-4">
+        <div className="flex h-full items-center justify-between">
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
-              <span className="text-xl font-semibold text-gray-900 dark:text-white">
+              <span className="text-xl font-semibold text-gray-900">
                 Therapy Booking
               </span>
             </Link>
-            <div className="hidden md:ml-6 md:flex md:space-x-8">
-              <Link
-                href="/"
-                className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-white border-b-2 border-transparent hover:border-gray-300 dark:hover:border-gray-700"
-              >
-                Home
-              </Link>
-              {user && (
-                <Link
-                  href="/admin/dashboard"
-                  className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-white border-b-2 border-transparent hover:border-gray-300 dark:hover:border-gray-700"
-                >
-                  Dashboard
-                </Link>
-              )}
-            </div>
           </div>
           <div className="flex items-center">
             {user ? (
               <Button
                 onClick={handleLogout}
                 variant="outline"
-                className="ml-4 px-4 py-2 text-sm font-medium"
+                size="sm"
+                className="ml-4"
               >
                 Logout
               </Button>
@@ -79,7 +62,8 @@ export default function Navbar() {
               <Link href="/login">
                 <Button
                   variant="default"
-                  className="ml-4 px-4 py-2 text-sm font-medium"
+                  size="sm"
+                  className="ml-4"
                 >
                   Login
                 </Button>

@@ -175,7 +175,7 @@ export default function UserBookingForm() {
           <Button
             onClick={handleCreateBooking}
             disabled={loading || !selectedTime || !selectedDate}
-            className="w-full"
+            className="w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white"
           >
             {loading ? <LoadingSpinner /> : 'Create Booking'}
           </Button>

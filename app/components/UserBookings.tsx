@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { collection, query, where, orderBy, onSnapshot, Timestamp, getDoc, doc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/clientApp';
-import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import LoadingSpinner from './LoadingSpinner';
 import { useToast } from './ui/use-toast';
@@ -11,9 +10,11 @@ import ColorLabel from './ColorLabel';
 import { onAuthStateChanged } from 'firebase/auth';
 import UserBookingForm from './UserBookingForm';
 import { Button } from './ui/button';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, X, Check, AlertCircle } from 'lucide-react';
 import { createGoogleCalendarUrl } from '../lib/calendar-utils';
 import { cn } from '../lib/utils';
+import { Badge } from './ui/badge';
+import { format } from 'date-fns';
 
 interface Booking {
   id: string;
@@ -28,16 +29,21 @@ interface Booking {
   status: 'confirmed' | 'cancelled' | 'rescheduled';
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  rescheduledTo?: string; // Reference to the new booking ID
+  rescheduledTo?: string;
 }
 
-export default function UserBookings() {
+interface UserBookingsProps {
+  showPast?: boolean;
+}
+
+export default function UserBookings({ showPast = false }: UserBookingsProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userInfo, setUserInfo] = useState<{ name: string; email: string } | null>(null);
   const [bookingSettings, setBookingSettings] = useState<{ timeLimit: number; cancelTimeLimit: number }>({ timeLimit: 48, cancelTimeLimit: 24 });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   // Handle auth state changes
@@ -79,9 +85,20 @@ export default function UserBookings() {
             timeLimit: data.timeLimit || 48,
             cancelTimeLimit: data.cancelTimeLimit || 24
           });
+        } else {
+          // Use default settings if no settings document exists
+          setBookingSettings({
+            timeLimit: 48,
+            cancelTimeLimit: 24
+          });
         }
       } catch (error) {
         console.error('Error fetching booking settings:', error);
+        // Use default settings on error
+        setBookingSettings({
+          timeLimit: 48,
+          cancelTimeLimit: 24
+        });
       }
     };
 
@@ -152,18 +169,9 @@ export default function UserBookings() {
     return hoursDifference >= limitHours;
   };
 
-  const handleCancel = async (booking: Booking) => {
-    if (!isWithinTimeLimit(booking, bookingSettings.cancelTimeLimit)) {
-      toast({
-        title: "Cannot Cancel Booking",
-        description: `Bookings can only be cancelled ${bookingSettings.cancelTimeLimit} hours or more before the appointment.`,
-        variant: "destructive"
-      });
-      return;
-    }
-
+  const handleCancelBooking = async (id: string) => {
     try {
-      await updateDoc(doc(db, 'bookings', booking.id), {
+      await updateDoc(doc(db, 'bookings', id), {
         status: 'cancelled',
         updatedAt: new Date()
       });
@@ -182,192 +190,166 @@ export default function UserBookings() {
     }
   };
 
-  const handleReschedule = async (booking: Booking) => {
-    if (!isWithinTimeLimit(booking, bookingSettings.timeLimit)) {
-      toast({
-        title: "Cannot Reschedule",
-        description: `Bookings can only be rescheduled ${bookingSettings.timeLimit} hours or more before the appointment.`,
-        variant: "destructive"
-      });
-      return;
-    }
-
+  const handleRescheduleBooking = async (id: string) => {
     try {
-      await updateDoc(doc(db, 'bookings', booking.id), {
+      setIsSubmitting(true);
+      const bookingRef = doc(db, 'bookings', id);
+      await updateDoc(bookingRef, {
         status: 'rescheduled',
         updatedAt: new Date()
       });
-
+      
       toast({
-        title: "Booking Ready for Reschedule",
-        description: "Please use the booking form above to create your new booking.",
+        title: "Booking Rescheduled",
+        description: "Please create a new booking for your preferred time.",
       });
     } catch (error) {
-      console.error('Error updating booking status:', error);
+      console.error('Error rescheduling booking:', error);
       toast({
         title: "Error",
-        description: "Failed to prepare booking for rescheduling. Please try again.",
-        variant: "destructive"
+        description: "Failed to reschedule booking",
+        variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return (
+          <div className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700">
+            <Check className="w-3 h-3 mr-1" />
+            Confirmed
+          </div>
+        );
+      case 'cancelled':
+        return (
+          <div className="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700">
+            <X className="w-3 h-3 mr-1" />
+            Cancelled
+          </div>
+        );
+      case 'rescheduled':
+        return (
+          <div className="inline-flex items-center rounded-full bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700">
+            <Clock className="w-3 h-3 mr-1" />
+            Rescheduled
+          </div>
+        );
+      default:
+        return (
+          <div className="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            {status}
+          </div>
+        );
     }
   };
 
   if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (error) {
+    return <p className="text-red-500">{error}</p>;
+  }
+
+  const filteredBookings = bookings
+    .filter(booking => {
+      const bookingDate = booking.date.toDate();
+      const now = new Date();
+      return showPast ? bookingDate < now : bookingDate >= now;
+    })
+    .sort((a, b) => {
+      const dateA = a.date.toDate();
+      const dateB = b.date.toDate();
+      return showPast ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
+    });
+
+  if (filteredBookings.length === 0) {
     return (
-      <div className="flex justify-center p-4">
-        <LoadingSpinner />
+      <div className="text-center py-8">
+        <CalendarIcon className="mx-auto h-12 w-12 text-gray-400" />
+        <h3 className="mt-2 text-sm font-semibold text-gray-900">No bookings</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          {showPast ? "You don't have any past sessions." : "Get started by creating a new booking."}
+        </p>
+        {!showPast && (
+          <div className="mt-6">
+            <UserBookingForm />
+          </div>
+        )}
       </div>
     );
   }
 
-  if (!currentUser) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-center text-red-500">Please log in to view and create bookings</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {userInfo && (
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Welcome Back!</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-center">
-              <p className="text-xl font-medium">{userInfo.name}</p>
-              <p className="text-sm text-muted-foreground">{userInfo.email}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      {error ? (
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-red-500">{error}</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <UserBookingForm />
-      )}
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Bookings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {bookings.length === 0 ? (
-            <p className="text-center text-gray-500 py-4">No bookings found</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Label</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bookings.map((booking) => {
-                  console.log('Rendering booking:', booking);
-                  return (
-                    <TableRow 
-                      key={booking.id}
-                      className={cn(
-                        booking.status === 'rescheduled' && "line-through opacity-50",
-                        booking.status === 'cancelled' && "opacity-50"
-                      )}
-                    >
-                      <TableCell>
-                        {booking.date instanceof Timestamp 
-                          ? booking.date.toDate().toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            })
-                          : new Date(booking.date).toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            })}
-                      </TableCell>
-                      <TableCell>{booking.time}</TableCell>
-                      <TableCell>
-                        {booking.userLabel && (
-                          <ColorLabel
-                            name={booking.userLabel}
-                            color={booking.userLabelColor || '#808080'}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className={cn(
-                          "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                          booking.status === 'confirmed' && "bg-green-100 text-green-800",
-                          booking.status === 'cancelled' && "bg-red-100 text-red-800",
-                          booking.status === 'rescheduled' && "bg-yellow-100 text-yellow-800"
-                        )}>
-                          {booking.status}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-sm ${
-                          booking.recurring === 'weekly'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {booking.recurring === 'weekly' ? 'Weekly' : 'One-time'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {booking.status === 'confirmed' && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleReschedule(booking)}
-                                disabled={!isWithinTimeLimit(booking, bookingSettings.timeLimit)}
-                              >
-                                Reschedule
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => handleCancel(booking)}
-                                disabled={!isWithinTimeLimit(booking, bookingSettings.cancelTimeLimit)}
-                              >
-                                Cancel
-                              </Button>
-                            </>
-                          )}
-                          {booking.status !== 'cancelled' && booking.status !== 'rescheduled' && (
+    <div className="space-y-4">
+      {!showPast && <UserBookingForm />}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead className="w-[100px]">Date</TableHead>
+              <TableHead>Time</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredBookings.map((booking) => (
+              <TableRow key={booking.id}>
+                <TableCell className="font-medium">
+                  {format(booking.date.toDate(), 'MMM d, yyyy')}
+                </TableCell>
+                <TableCell>{booking.time}</TableCell>
+                <TableCell>{getStatusBadge(booking.status)}</TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end space-x-2">
+                    {booking.status === 'confirmed' && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(createGoogleCalendarUrl(booking), '_blank')}
+                          className="bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-700 border-blue-200"
+                        >
+                          <CalendarIcon className="h-4 w-4 mr-1" />
+                          Add to Calendar
+                        </Button>
+                        {!showPast && (
+                          <>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => window.open(createGoogleCalendarUrl(booking), '_blank')}
+                              onClick={() => handleRescheduleBooking(booking.id)}
+                              className="bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-700 border-purple-200"
                             >
-                              <CalendarIcon className="h-4 w-4" />
+                              <Clock className="h-4 w-4 mr-1" />
+                              Reschedule
                             </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCancelBooking(booking.id)}
+                              className="bg-gradient-to-r from-rose-50 to-rose-100 hover:from-rose-100 hover:to-rose-200 text-rose-700 border-rose-200"
+                            >
+                              <X className="h-4 w-4 mr-1" />
+                              Cancel
+                            </Button>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

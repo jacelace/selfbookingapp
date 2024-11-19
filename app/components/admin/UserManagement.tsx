@@ -42,7 +42,39 @@ export const UserManagement: React.FC<UserManagementProps> = ({
 
   const [showPendingOnly, setShowPendingOnly] = useState(false);
   const pendingUsers = users.filter(user => user.status === 'pending');
-  const displayUsers = showPendingOnly ? pendingUsers : users;
+  const approvedUsers = users.filter(user => user.status === 'approved');
+  // Combine pending users first, followed by approved users
+  const sortedUsers = [...pendingUsers, ...approvedUsers];
+  const displayUsers = showPendingOnly ? pendingUsers : sortedUsers;
+
+  const handleUpdateUserLabel = async (userId: string, labelId: string) => {
+    try {
+      setIsSubmitting(true);
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, { labelId });
+      
+      // Update local state
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId ? { ...user, labelId } : user
+        )
+      );
+      
+      toast({
+        title: "Success",
+        description: "User label updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating user label:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user label",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();

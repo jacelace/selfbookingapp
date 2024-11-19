@@ -1,24 +1,24 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button } from './ui/button';
+import { Button } from '../ui/button';
 import { ArrowLeft, Users, Calendar, Tag, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { collection, query, doc, getDoc, setDoc, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
-import { db, auth } from '../firebase/clientApp';
-import type { EnhancedUser, EnhancedBooking, Label as LabelType } from '../types/shared';
-import LoadingSpinner from './LoadingSpinner';
-import { TEST_CREDENTIALS } from '../lib/constants';
-import { UserManagement } from './admin/UserManagement';
-import { LabelManagement } from './admin/LabelManagement';
-import { BookingManagement } from './admin/BookingManagement';
-import { BookingCalendar } from './admin/BookingCalendar';
-import { CreateUserForm } from './admin/CreateUserForm';
-import { toast } from './ui/use-toast';
-import { useFirebase } from '../FirebaseProvider';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Separator } from './ui/separator';
+import { db, auth } from '../../firebase/clientApp';
+import type { EnhancedUser, EnhancedBooking, Label as LabelType } from '../../types/shared';
+import LoadingSpinner from '../LoadingSpinner';
+import { TEST_CREDENTIALS } from '../../lib/constants';
+import { UserManagement } from './UserManagement';
+import { LabelManagement } from './LabelManagement';
+import { BookingManagement } from './BookingManagement';
+import { BookingCalendar } from './BookingCalendar';
+import { CreateUserForm } from './CreateUserForm';
+import { toast } from '../ui/use-toast';
+import { useFirebase } from '../../FirebaseProvider';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Separator } from '../ui/separator';
 
 const AdminDashboard: React.FC = () => {
   // Data states
@@ -261,7 +261,7 @@ const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-4">
+    <div className="container mx-auto p-6 space-y-6 mt-16">
       <div className="flex justify-between items-center mb-4">
         <div>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Admin Dashboard</h1>
