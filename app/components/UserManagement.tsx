@@ -8,6 +8,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Switch } from './ui/switch';
 import { toast } from './ui/use-toast';
+import { cn } from "../lib/utils";
 
 interface UserManagementProps {
   users: EnhancedUser[];
@@ -69,7 +70,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onUpdateUser, on
           </thead>
           <tbody>
             {users.map((user) => (
-              <tr key={user.id} className="border-b border-light-brown">
+              <tr key={user.id} className={cn(
+                "border-b border-light-brown hover:bg-muted/50",
+                user.status === 'pending' && "bg-yellow-100 hover:bg-yellow-200/70"
+              )}>
                 <td className="p-2">{user.name}</td>
                 <td className="p-2">{user.email}</td>
                 <td className="p-2">

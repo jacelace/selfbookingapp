@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar } from '../ui/calendar';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -12,9 +12,18 @@ import type { EnhancedBooking } from '../../types/shared';
 import ColorLabel from '../ColorLabel';
 import { cn } from '../../lib/utils';
 import { Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '../../firebase/clientApp';
 
 interface BookingCalendarProps {
   bookings: EnhancedBooking[];
+}
+
+interface TimeOff {
+  id: string;
+  startDate: Timestamp;
+  endDate: Timestamp;
+  reason: string;
 }
 
 interface DayBookingsDialogProps {
@@ -96,104 +105,113 @@ function DayBookingsDialog({ date, bookings, open, onOpenChange }: DayBookingsDi
 }
 
 export function BookingCalendar({ bookings }: BookingCalendarProps) {
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [date, setDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [timeOffPeriods, setTimeOffPeriods] = useState<TimeOff[]>([]);
 
-  // Get bookings for the current month
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  
-  const monthBookings = bookings.filter(booking => {
-    const bookingDate = safeGetDate(booking.date);
-    return bookingDate && bookingDate >= monthStart && bookingDate <= monthEnd;
-  });
+  // Fetch time-off periods
+  useEffect(() => {
+    const fetchTimeOffPeriods = async () => {
+      try {
+        const timeOffSnapshot = await getDocs(collection(db, 'timeoff'));
+        const periods = timeOffSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as TimeOff[];
+        setTimeOffPeriods(periods);
+      } catch (error) {
+        console.error('Error fetching time-off periods:', error);
+      }
+    };
 
-  // Create a map of dates to booking counts
-  const bookingCounts = monthBookings.reduce((acc, booking) => {
-    const bookingDate = safeGetDate(booking.date);
-    if (bookingDate) {
-      const dateString = bookingDate.toDateString();
-      acc[dateString] = (acc[dateString] || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>);
+    fetchTimeOffPeriods();
+  }, []);
 
-  const handlePreviousMonth = () => {
-    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1));
+  // Check if a date is within any time-off period
+  const isDateInTimeOff = (date: Date) => {
+    return timeOffPeriods.some(period => {
+      const start = period.startDate.toDate();
+      const end = period.endDate.toDate();
+      return date >= start && date <= end;
+    });
   };
 
-  const handleNextMonth = () => {
-    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1));
+  // Get time-off reason for a date if it exists
+  const getTimeOffReason = (date: Date) => {
+    const period = timeOffPeriods.find(period => {
+      const start = period.startDate.toDate();
+      const end = period.endDate.toDate();
+      return date >= start && date <= end;
+    });
+    return period?.reason;
   };
 
   const handleDateSelect = (date: Date | undefined) => {
-    if (date) {
+    if (date && !isDateInTimeOff(date)) {
       setSelectedDate(date);
-      setDialogOpen(true);
+      setIsDialogOpen(true);
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Booking Calendar</CardTitle>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handlePreviousMonth}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="min-w-[130px] text-center font-medium">
-              {format(currentMonth, 'MMMM yyyy')}
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleNextMonth}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+    <div>
+      <div className="flex items-center justify-between space-x-2 py-2">
+        <Button
+          variant="outline"
+          className="w-10 h-10 p-0"
+          onClick={() => setDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1))}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="font-semibold">
+          {format(date, 'MMMM yyyy')}
         </div>
-      </CardHeader>
-      <CardContent>
-        <Calendar
-          mode="single"
-          selected={selectedDate}
-          onSelect={handleDateSelect}
-          month={currentMonth}
-          className="rounded-md border"
-          components={{
-            DayContent: ({ date }) => {
-              const count = bookingCounts[date.toDateString()];
-              return (
-                <div className="relative w-full h-full p-2">
-                  <div className="absolute top-0 right-0 left-0 text-center">
-                    {date.getDate()}
-                  </div>
-                  {count && (
-                    <div className="absolute bottom-0 left-0 right-0 flex justify-center">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    </div>
-                  )}
+        <Button
+          variant="outline"
+          className="w-10 h-10 p-0"
+          onClick={() => setDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1))}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <Calendar
+        mode="single"
+        selected={selectedDate}
+        onSelect={handleDateSelect}
+        month={date}
+        modifiers={{
+          timeoff: (date) => isDateInTimeOff(date),
+          booked: (date) => bookings.some(booking => {
+            const bookingDate = safeGetDate(booking.date);
+            return bookingDate && isSameDay(bookingDate, date);
+          })
+        }}
+        modifiersStyles={{
+          timeoff: { backgroundColor: '#FEF3C7', color: '#92400E' },
+          booked: { backgroundColor: '#DBEAFE', color: '#1E40AF' }
+        }}
+        components={{
+          DayContent: ({ date }) => (
+            <div className="relative w-full h-full flex items-center justify-center">
+              <span>{format(date, 'd')}</span>
+              {isDateInTimeOff(date) && (
+                <div className="absolute bottom-0 left-0 right-0 text-[8px] text-amber-800 truncate px-1">
+                  {getTimeOffReason(date)}
                 </div>
-              );
-            },
-          }}
-        />
-      </CardContent>
-      {selectedDate && (
-        <DayBookingsDialog
-          date={selectedDate}
-          bookings={bookings}
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-        />
-      )}
-    </Card>
+              )}
+            </div>
+          )
+        }}
+      />
+
+      <DayBookingsDialog
+        date={selectedDate || new Date()}
+        bookings={bookings}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+      />
+    </div>
   );
 }

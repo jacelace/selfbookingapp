@@ -53,5 +53,11 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
+
+    // Time Off collection
+    match /timeOff/{timeOffId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
   }
 }

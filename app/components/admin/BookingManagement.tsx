@@ -19,6 +19,10 @@ import ColorLabel from '../ColorLabel';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { TimeOffManagement } from './TimeOffManagement';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
 
 const timeSlots: TimeString[] = [
   '10:00 AM', '11:00 AM', '12:00 PM',
@@ -215,83 +219,71 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
   ).sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
 
   return (
-    <div className="space-y-6">
-      {/* Booking Settings Section */}
-      <Card className="w-full max-w-md">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Booking Settings</CardTitle>
+    <div className="space-y-4">
+      <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Time Limits</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           <form onSubmit={handleSettingsUpdate} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="timeLimit" className="text-sm font-medium">
-                  Booking Time Limit
-                </label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    id="timeLimit"
-                    type="number"
-                    min="1"
-                    max="168"
-                    value={bookingTimeLimit}
-                    onChange={(e) => setBookingTimeLimit(Number(e.target.value))}
-                    className="h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background"
-                  />
-                  <span className="text-sm text-gray-500">hrs</span>
-                </div>
-                <p className="text-xs text-gray-500">
-                  Maximum hours in advance for bookings
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="cancelTimeLimit" className="text-sm font-medium">
-                  Cancel Time Limit
-                </label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    id="cancelTimeLimit"
-                    type="number"
-                    min="1"
-                    max={bookingTimeLimit}
-                    value={cancelTimeLimit}
-                    onChange={(e) => setCancelTimeLimit(Number(e.target.value))}
-                    className="h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background"
-                  />
-                  <span className="text-sm text-gray-500">hrs</span>
-                </div>
-                <p className="text-xs text-gray-500">
-                  Hours required before cancellation
-                </p>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="timeLimit">Booking Time Limit (hours)</Label>
+              <Input
+                id="timeLimit"
+                type="number"
+                value={bookingTimeLimit}
+                onChange={(e) => setBookingTimeLimit(Number(e.target.value))}
+                min={1}
+              />
+              <p className="text-sm text-muted-foreground">
+                How many hours in advance users must book
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="cancelTimeLimit">Cancellation Time Limit (hours)</Label>
+              <Input
+                id="cancelTimeLimit"
+                type="number"
+                value={cancelTimeLimit}
+                onChange={(e) => setCancelTimeLimit(Number(e.target.value))}
+                min={1}
+              />
+              <p className="text-sm text-muted-foreground">
+                How many hours in advance users must cancel
+              </p>
             </div>
 
-            <div className="flex justify-end pt-2">
-              <Button 
-                type="submit" 
-                disabled={isSettingsLoading}
-                size="sm"
-                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
-              >
-                {isSettingsLoading ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </div>
+            <Button 
+              type="submit" 
+              disabled={isSettingsLoading}
+              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
+            >
+              {isSettingsLoading ? <LoadingSpinner /> : 'Save Settings'}
+            </Button>
           </form>
         </CardContent>
       </Card>
 
-      {/* Booking Management Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Booking Management</CardTitle>
+      <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Time Off Management</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
+          <TimeOffManagement />
+        </CardContent>
+      </Card>
+
+      <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Bookings</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-2">
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* User Selection */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Select User</label>
+                <Label className="text-sm font-medium">Select User</Label>
                 <Select value={selectedUser} onValueChange={setSelectedUser}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select user" />
@@ -308,7 +300,7 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
 
               {/* Date Selection */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Select Date</label>
+                <Label className="text-sm font-medium">Select Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -340,7 +332,7 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
 
               {/* Time Selection */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Select Time</label>
+                <Label className="text-sm font-medium">Select Time</Label>
                 <Select value={selectedTime} onValueChange={(value) => setSelectedTime(value as TimeString)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select time" />
@@ -357,16 +349,16 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
 
               {/* Recurring Option */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Recurring Booking</label>
+                <Label className="text-sm font-medium">Recurring Booking</Label>
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="recurring"
                     checked={isRecurring}
                     onCheckedChange={(checked) => setIsRecurring(checked as boolean)}
                   />
-                  <label htmlFor="recurring" className="text-sm font-medium">
+                  <Label htmlFor="recurring" className="text-sm font-medium">
                     Make it recurring
-                  </label>
+                  </Label>
                 </div>
               </div>
             </div>
@@ -380,8 +372,7 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
             <Button
               onClick={handleAddBooking}
               disabled={isSubmitting || !selectedTime || !selectedUser}
-              size="sm"
-              className="mt-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
             >
               {isSubmitting ? <LoadingSpinner /> : 'Create Booking'}
             </Button>

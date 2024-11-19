@@ -19,6 +19,7 @@ import { useFirebase } from '../../FirebaseProvider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Separator } from '../ui/separator';
+import { TimeOffManagement } from './TimeOffManagement';
 
 const AdminDashboard: React.FC = () => {
   // Data states
@@ -54,6 +55,8 @@ const AdminDashboard: React.FC = () => {
 
   // Set up real-time listener for users collection
   useEffect(() => {
+    if (!isAdmin) return;
+
     let isMounted = true;
 
     const usersQuery = query(
@@ -102,10 +105,12 @@ const AdminDashboard: React.FC = () => {
       isMounted = false;
       unsubscribe();
     };
-  }, []);
+  }, [isAdmin]);
 
   // Set up real-time listener for bookings collection
   useEffect(() => {
+    if (!isAdmin) return;
+
     let isMounted = true;
 
     const bookingsQuery = query(
@@ -168,10 +173,12 @@ const AdminDashboard: React.FC = () => {
       isMounted = false;
       unsubscribe();
     };
-  }, []);
+  }, [isAdmin]);
 
   // Set up real-time listener for labels collection
   useEffect(() => {
+    if (!isAdmin) return;
+
     let isMounted = true;
 
     const labelsQuery = query(collection(db, 'labels'));
@@ -207,7 +214,7 @@ const AdminDashboard: React.FC = () => {
       isMounted = false;
       unsubscribe();
     };
-  }, []);
+  }, [isAdmin]);
 
   // Admin check effect
   useEffect(() => {
@@ -334,11 +341,75 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="bg-gradient-to-r from-blue-100/50 to-purple-100/50 p-1">
-          <TabsTrigger value="users" className="text-lg font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">Users</TabsTrigger>
-          <TabsTrigger value="bookings" className="text-lg font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">Bookings</TabsTrigger>
-          <TabsTrigger value="labels" className="text-lg font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">Labels</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 h-auto bg-gradient-to-r from-slate-50 to-gray-50 p-1 rounded-lg">
+          <TabsTrigger 
+            value="bookings"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-md py-3 text-sm font-medium"
+          >
+            <BookOpen className="w-4 h-4 mr-2" />
+            Bookings
+          </TabsTrigger>
+          <TabsTrigger 
+            value="users"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-md py-3 text-sm font-medium"
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Users
+          </TabsTrigger>
+          <TabsTrigger 
+            value="labels"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-rose-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-md py-3 text-sm font-medium"
+          >
+            <Tag className="w-4 h-4 mr-2" />
+            Labels
+          </TabsTrigger>
+          <TabsTrigger 
+            value="timeoff"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-md py-3 text-sm font-medium"
+          >
+            <Calendar className="w-4 h-4 mr-2" />
+            Time Off
+          </TabsTrigger>
         </TabsList>
+
+        <style jsx global>{`
+          /* Bookings section buttons */
+          [data-state="active"][value="bookings"] ~ * button:not([variant="outline"]):not([variant="destructive"]) {
+            background-image: linear-gradient(to right, var(--tw-gradient-from-blue-500), var(--tw-gradient-to-purple-500));
+          }
+          
+          /* Users section buttons */
+          [data-state="active"][value="users"] ~ * button:not([variant="outline"]):not([variant="destructive"]) {
+            background-image: linear-gradient(to right, var(--tw-gradient-from-purple-500), var(--tw-gradient-to-pink-500));
+          }
+          
+          /* Labels section buttons */
+          [data-state="active"][value="labels"] ~ * button:not([variant="outline"]):not([variant="destructive"]) {
+            background-image: linear-gradient(to right, var(--tw-gradient-from-pink-500), var(--tw-gradient-to-rose-500));
+          }
+          
+          /* Time Off section buttons */
+          [data-state="active"][value="timeoff"] ~ * button:not([variant="outline"]):not([variant="destructive"]) {
+            background-image: linear-gradient(to right, var(--tw-gradient-from-rose-500), var(--tw-gradient-to-orange-500));
+          }
+
+          /* Hover states */
+          [data-state="active"][value="bookings"] ~ * button:not([variant="outline"]):not([variant="destructive"]):hover {
+            background-image: linear-gradient(to right, var(--tw-gradient-from-blue-600), var(--tw-gradient-to-purple-600));
+          }
+          
+          [data-state="active"][value="users"] ~ * button:not([variant="outline"]):not([variant="destructive"]):hover {
+            background-image: linear-gradient(to right, var(--tw-gradient-from-purple-600), var(--tw-gradient-to-pink-600));
+          }
+          
+          [data-state="active"][value="labels"] ~ * button:not([variant="outline"]):not([variant="destructive"]):hover {
+            background-image: linear-gradient(to right, var(--tw-gradient-from-pink-600), var(--tw-gradient-to-rose-600));
+          }
+          
+          [data-state="active"][value="timeoff"] ~ * button:not([variant="outline"]):not([variant="destructive"]):hover {
+            background-image: linear-gradient(to right, var(--tw-gradient-from-rose-600), var(--tw-gradient-to-orange-600));
+          }
+        `}</style>
 
         <TabsContent value="users" className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
@@ -416,6 +487,10 @@ const AdminDashboard: React.FC = () => {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="timeoff" className="space-y-4">
+          <TimeOffManagement />
         </TabsContent>
       </Tabs>
     </div>

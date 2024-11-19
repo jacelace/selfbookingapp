@@ -177,7 +177,7 @@ export const LabelManagement: React.FC<LabelManagementProps> = ({
                 type="submit" 
                 disabled={isSubmitting || !newLabel.name || !newLabel.color}
                 size="sm"
-                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
               >
                 {isSubmitting ? <LoadingSpinner /> : 'Create Label'}
               </Button>

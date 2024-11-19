@@ -7,14 +7,14 @@ import { useEffect } from 'react';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 export default function DashboardPage() {
-  const { user, loading } = useFirebase();
+  const { user, loading, isAdmin } = useFirebase();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/');  // Redirect to main page for login
+    if (!loading && (!user || !isAdmin)) {
+      router.push('/');  // Redirect to main page if not admin
     }
-  }, [user, loading, router]);
+  }, [user, loading, isAdmin, router]);
 
   if (loading) {
     return (
@@ -24,7 +24,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!user) {
+  if (!user || !isAdmin) {
     return null;
   }
 

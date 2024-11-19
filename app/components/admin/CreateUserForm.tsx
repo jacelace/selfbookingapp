@@ -167,7 +167,11 @@ export function CreateUserForm({ labels, isSubmitting, setIsSubmitting, onSucces
         <Label htmlFor="approved">Approve User Immediately</Label>
       </div>
 
-      <Button type="submit" disabled={isSubmitting} className="w-full">
+      <Button 
+        type="submit" 
+        disabled={isSubmitting} 
+        className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+      >
         {isSubmitting ? 'Creating User...' : 'Create User'}
       </Button>
     </form>

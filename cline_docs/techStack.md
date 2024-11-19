@@ -52,6 +52,22 @@
   - User references
   - Status tracking
   - Time slot management
+- timeOff
+  - Time-off period details
+  - Staff availability tracking
+  - Admin-managed periods
+
+### Security Rules
+- Authentication-based access
+- Role-based permissions:
+  - Admin privileges for all write operations
+  - User-specific read access
+  - Collection-specific rules:
+    - users: Self-management and admin control
+    - bookings: User-specific creation and admin management
+    - labels: Read-only for users, full access for admins
+    - settings: Read-only for users, admin-only writes
+    - timeOff: Read access for all users, admin-only writes
 
 ## State Management
 - React Context
