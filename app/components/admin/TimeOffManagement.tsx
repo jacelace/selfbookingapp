@@ -217,7 +217,7 @@ export function TimeOffManagement() {
         <Button 
           type="submit" 
           disabled={isLoading}
-          className="bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white"
+          className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
         >
           {isLoading ? 'Adding...' : 'Add Time Off'}
         </Button>

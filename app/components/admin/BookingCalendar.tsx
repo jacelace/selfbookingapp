@@ -114,7 +114,7 @@ export function BookingCalendar({ bookings }: BookingCalendarProps) {
   useEffect(() => {
     const fetchTimeOffPeriods = async () => {
       try {
-        const timeOffSnapshot = await getDocs(collection(db, 'timeoff'));
+        const timeOffSnapshot = await getDocs(collection(db, 'timeOff'));
         const periods = timeOffSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -147,6 +147,14 @@ export function BookingCalendar({ bookings }: BookingCalendarProps) {
     return period?.reason;
   };
 
+  // Get bookings for a specific date
+  const getBookingsForDate = (date: Date) => {
+    return bookings.filter(booking => {
+      const bookingDate = safeGetDate(booking.date);
+      return bookingDate && isSameDay(bookingDate, date);
+    });
+  };
+
   const handleDateSelect = (date: Date | undefined) => {
     if (date && !isDateInTimeOff(date)) {
       setSelectedDate(date);
@@ -155,63 +163,80 @@ export function BookingCalendar({ bookings }: BookingCalendarProps) {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between space-x-2 py-2">
-        <Button
-          variant="outline"
-          className="w-10 h-10 p-0"
-          onClick={() => setDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1))}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <div className="font-semibold">
-          {format(date, 'MMMM yyyy')}
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle>Booking Calendar</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-center">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={handleDateSelect}
+            month={date}
+            onMonthChange={setDate}
+            className="rounded-md border w-full"
+            classNames={{
+              months: "space-y-4",
+              month: "space-y-4",
+              caption: "flex justify-center pt-1 relative items-center",
+              caption_label: "text-sm font-medium",
+              nav: "space-x-1 flex items-center",
+              nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+              nav_button_previous: "absolute left-1",
+              nav_button_next: "absolute right-1",
+              table: "w-full border-collapse space-y-1",
+              head_row: "flex",
+              head_cell: "text-muted-foreground rounded-md w-14 font-normal text-[0.8rem]",
+              row: "flex w-full mt-2",
+              cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md",
+              day: "h-14 w-14 p-0 font-normal aria-selected:opacity-100",
+              day_range_end: "day-range-end",
+              day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+              day_today: "bg-accent text-accent-foreground",
+              day_outside: "text-muted-foreground opacity-50",
+              day_disabled: "text-muted-foreground opacity-50",
+              day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+              day_hidden: "invisible",
+            }}
+            components={{
+              DayContent: ({ date: dayDate }) => {
+                const dayBookings = getBookingsForDate(dayDate);
+                const isTimeOff = isDateInTimeOff(dayDate);
+                return (
+                  <div className="w-full h-full relative">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {dayDate.getDate()}
+                    </div>
+                    {!isTimeOff && dayBookings.length > 0 && (
+                      <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-0.5">
+                        {Array.from({ length: Math.min(dayBookings.length, 3) }).map((_, i) => (
+                          <div
+                            key={i}
+                            className="w-1 h-1 rounded-full bg-primary"
+                          />
+                        ))}
+                        {dayBookings.length > 3 && (
+                          <div className="w-1 h-1 rounded-full bg-primary opacity-50" />
+                        )}
+                      </div>
+                    )}
+                    {isTimeOff && (
+                      <div className="absolute inset-0 bg-destructive/20 rounded-md" />
+                    )}
+                  </div>
+                );
+              }
+            }}
+          />
         </div>
-        <Button
-          variant="outline"
-          className="w-10 h-10 p-0"
-          onClick={() => setDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1))}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <Calendar
-        mode="single"
-        selected={selectedDate}
-        onSelect={handleDateSelect}
-        month={date}
-        modifiers={{
-          timeoff: (date) => isDateInTimeOff(date),
-          booked: (date) => bookings.some(booking => {
-            const bookingDate = safeGetDate(booking.date);
-            return bookingDate && isSameDay(bookingDate, date);
-          })
-        }}
-        modifiersStyles={{
-          timeoff: { backgroundColor: '#FEF3C7', color: '#92400E' },
-          booked: { backgroundColor: '#DBEAFE', color: '#1E40AF' }
-        }}
-        components={{
-          DayContent: ({ date }) => (
-            <div className="relative w-full h-full flex items-center justify-center">
-              <span>{format(date, 'd')}</span>
-              {isDateInTimeOff(date) && (
-                <div className="absolute bottom-0 left-0 right-0 text-[8px] text-amber-800 truncate px-1">
-                  {getTimeOffReason(date)}
-                </div>
-              )}
-            </div>
-          )
-        }}
-      />
-
+      </CardContent>
       <DayBookingsDialog
         date={selectedDate || new Date()}
         bookings={bookings}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
       />
-    </div>
+    </Card>
   );
 }
