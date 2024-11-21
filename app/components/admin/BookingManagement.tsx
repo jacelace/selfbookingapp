@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase/clientApp';
-import { Label as LabelType, EnhancedUser, EnhancedBooking } from '../../types/shared';
+import { Label as LabelType, EnhancedUser, EnhancedBooking, TimeString } from '../../types/shared';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import LoadingSpinner from '../LoadingSpinner';
@@ -27,9 +27,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 
-const timeSlots: string[] = [
-  '9:00 AM', '9:50 AM', '10:40 AM', '11:30 AM',
-  '1:00 PM', '1:50 PM', '2:40 PM', '3:30 PM'
+const timeSlots: TimeString[] = [
+  '10:00 AM', '11:00 AM', '12:00 PM',
+  '1:00 PM', '2:00 PM', '3:00 PM'
 ];
 
 interface BookingManagementProps {
@@ -62,7 +62,7 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
 }) => {
   // States
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedTime, setSelectedTime] = useState<string>('');
+  const [selectedTime, setSelectedTime] = useState<TimeString | ''>('');
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | EnhancedBooking['status']>('all');
