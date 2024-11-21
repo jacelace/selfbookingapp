@@ -25,8 +25,8 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 
 const timeSlots: TimeString[] = [
-  '10:00 AM', '11:00 AM', '12:00 PM',
-  '1:00 PM', '2:00 PM', '3:00 PM'
+  '9:00 AM', '9:50 AM', '10:40 AM', '11:30 AM',
+  '1:00 PM', '1:50 PM', '2:40 PM', '3:30 PM'
 ];
 
 interface BookingManagementProps {
@@ -222,60 +222,6 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
     <div className="space-y-4">
       <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Time Limits</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-2">
-          <form onSubmit={handleSettingsUpdate} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="timeLimit">Booking Time Limit (hours)</Label>
-              <Input
-                id="timeLimit"
-                type="number"
-                value={bookingTimeLimit}
-                onChange={(e) => setBookingTimeLimit(Number(e.target.value))}
-                min={1}
-              />
-              <p className="text-sm text-muted-foreground">
-                How many hours in advance users must book
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="cancelTimeLimit">Cancellation Time Limit (hours)</Label>
-              <Input
-                id="cancelTimeLimit"
-                type="number"
-                value={cancelTimeLimit}
-                onChange={(e) => setCancelTimeLimit(Number(e.target.value))}
-                min={1}
-              />
-              <p className="text-sm text-muted-foreground">
-                How many hours in advance users must cancel
-              </p>
-            </div>
-
-            <Button 
-              type="submit" 
-              disabled={isSettingsLoading}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
-            >
-              {isSettingsLoading ? <LoadingSpinner /> : 'Save Settings'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Time Off Management</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-2">
-          <TimeOffManagement />
-        </CardContent>
-      </Card>
-
-      <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
-        <CardHeader className="pb-2">
           <CardTitle className="text-lg">Bookings</CardTitle>
         </CardHeader>
         <CardContent className="pt-2">
@@ -441,6 +387,60 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
               </TableBody>
             </Table>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Time Limits</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <form onSubmit={handleSettingsUpdate} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="timeLimit">Booking Time Limit (hours)</Label>
+              <Input
+                id="timeLimit"
+                type="number"
+                value={bookingTimeLimit}
+                onChange={(e) => setBookingTimeLimit(Number(e.target.value))}
+                min={1}
+              />
+              <p className="text-sm text-muted-foreground">
+                How many hours in advance users must book
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="cancelTimeLimit">Cancellation Time Limit (hours)</Label>
+              <Input
+                id="cancelTimeLimit"
+                type="number"
+                value={cancelTimeLimit}
+                onChange={(e) => setCancelTimeLimit(Number(e.target.value))}
+                min={1}
+              />
+              <p className="text-sm text-muted-foreground">
+                How many hours in advance users must cancel
+              </p>
+            </div>
+
+            <Button 
+              type="submit" 
+              disabled={isSettingsLoading}
+              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
+            >
+              {isSettingsLoading ? <LoadingSpinner /> : 'Save Settings'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Time Off Management</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <TimeOffManagement />
         </CardContent>
       </Card>
     </div>

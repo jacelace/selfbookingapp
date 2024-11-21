@@ -40,7 +40,7 @@ const AdminDashboard: React.FC = () => {
   const pendingUsers = users.filter(user => !user.isApproved).length;
   const totalBookings = bookings.length;
   const upcomingBookings = bookings.filter(booking => 
-    booking.date >= new Date().toISOString().split('T')[0]
+    booking.date.toDate() >= new Date(new Date().setHours(0, 0, 0, 0))
   ).length;
 
   // Clear error after 5 seconds
@@ -354,7 +354,7 @@ const AdminDashboard: React.FC = () => {
             className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-md py-3 text-sm font-medium"
           >
             <Users className="w-4 h-4 mr-2" />
-            Users
+            Calendar/Users
           </TabsTrigger>
           <TabsTrigger 
             value="labels"
@@ -415,6 +415,16 @@ const AdminDashboard: React.FC = () => {
           <div className="grid md:grid-cols-2 gap-4">
             <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
               <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Booking Calendar</CardTitle>
+                <CardDescription className="text-sm">View upcoming sessions</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-2">
+                <BookingCalendar bookings={bookings} />
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
+              <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Create New User</CardTitle>
                 <CardDescription className="text-sm">Add a new user to the system</CardDescription>
               </CardHeader>
@@ -430,16 +440,6 @@ const AdminDashboard: React.FC = () => {
                     });
                   }}
                 />
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Booking Calendar</CardTitle>
-                <CardDescription className="text-sm">View upcoming sessions</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-2">
-                <BookingCalendar bookings={bookings} />
               </CardContent>
             </Card>
           </div>
