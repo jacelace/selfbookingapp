@@ -12,7 +12,7 @@ export interface AddToGoogleCalendarProps {
 export default function AddToGoogleCalendar({ booking, className }: AddToGoogleCalendarProps) {
   const createGoogleCalendarUrl = () => {
     const [hours, minutes] = booking.time.split(':');
-    const startDate = new Date(booking.date);
+    const startDate = new Date(booking.date instanceof Date ? booking.date : booking.date.toDate());
     startDate.setHours(parseInt(hours), parseInt(minutes), 0);
     
     const endDate = new Date(startDate);
