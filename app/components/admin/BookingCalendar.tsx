@@ -84,7 +84,10 @@ function DayBookingsDialog({ date, bookings, open, onOpenChange }: DayBookingsDi
                   {booking ? (
                     <div className="mt-1 space-y-1">
                       <div className="text-sm">{booking.userName}</div>
-                      <ColorLabel color={booking.userLabelColor || '#808080'}>
+                      <ColorLabel 
+                        name={booking.userLabel || 'No Label'}
+                        color={booking.userLabelColor || '#808080'}
+                      >
                         {booking.userLabel || 'No Label'}
                       </ColorLabel>
                       <div className="text-xs text-muted-foreground">
