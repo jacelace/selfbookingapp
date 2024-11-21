@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { collection, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../firebase/clientApp';
 import type { Label as LabelType } from '../../types/shared';
-import ColorLabel from '../ColorLabel';
+import ColorLabel from '../ColorLabel/ColorLabel';
 import LoadingSpinner from '../LoadingSpinner';
 import { TEST_CREDENTIALS } from '../../lib/constants';
 import { toast } from '../ui/use-toast';

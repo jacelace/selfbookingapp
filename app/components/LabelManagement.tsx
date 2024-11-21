@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Label } from '../types/shared';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { ColorLabel } from './ColorLabel';
+import ColorLabel from './ColorLabel';
 
 interface LabelManagementProps {
   labels: Label[];
