@@ -10,10 +10,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "lint:fix": "next lint --fix",
     "setup-admin": "node scripts/setup-admin.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "clean": "rm -rf .next",
+    "build:prod": "npm run clean && npm run lint:fix && next build",
+    "vercel-build": "npm run build:prod"
   },
   "dependencies": {
     "@firebase/app": "^0.9.28",
