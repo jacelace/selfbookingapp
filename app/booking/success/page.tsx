@@ -80,20 +80,18 @@ export default function SuccessPage() {
   const convertToTimeString = (slot: string): TimeString => {
     // Map the slot to a valid TimeString
     const timeMap: Record<string, TimeString> = {
-      '9:00': '9:00 AM',
-      '9:50': '9:50 AM',
-      '10:40': '10:40 AM',
-      '11:30': '11:30 AM',
+      '10:00': '10:00 AM',
+      '11:00': '11:00 AM',
+      '12:00': '12:00 PM',
       '13:00': '1:00 PM',
-      '13:50': '1:50 PM',
-      '14:40': '2:40 PM',
-      '15:30': '3:30 PM'
+      '14:00': '2:00 PM',
+      '15:00': '3:00 PM'
     } as const;
 
     // Extract hour and minutes from the slot
     const [hour, minutes] = slot.split(':');
     const key = `${hour}:${minutes}`;
-    return timeMap[key] || '9:00 AM'; // Default to 9:00 AM if no match
+    return timeMap[key] || '10:00 AM'; // Default to 10:00 AM if no match
   };
 
   return (
