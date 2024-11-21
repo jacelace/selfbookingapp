@@ -2,17 +2,20 @@
 
 import * as React from 'react';
 import { useState, useEffect } from 'react';
-import { Calendar } from '../ui/calendar';
+import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
+import { db } from '../../firebase/clientApp';
+import { Label as LabelType, EnhancedUser, EnhancedBooking } from '../../types/shared';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import LoadingSpinner from '../LoadingSpinner';
+import AdminBookingForm from '../AdminBookingForm';
+import { Calendar } from '../ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Checkbox } from '../ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { collection, addDoc, updateDoc, Timestamp, doc, getDoc, setDoc } from 'firebase/firestore';
-import { db, auth } from '../../firebase/clientApp';
-import type { EnhancedBooking, EnhancedUser, TimeString, BookingStatus, Label as LabelType } from '../../types/shared';
-import LoadingSpinner from '../LoadingSpinner';
+import { addDoc, updateDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth } from '../../firebase/clientApp';
 import { TEST_CREDENTIALS } from '../../lib/constants';
 import { toast } from '../ui/use-toast';
 import ColorLabel from '../ColorLabel';
@@ -24,7 +27,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 
-const timeSlots: TimeString[] = [
+const timeSlots: string[] = [
   '9:00 AM', '9:50 AM', '10:40 AM', '11:30 AM',
   '1:00 PM', '1:50 PM', '2:40 PM', '3:30 PM'
 ];
@@ -59,10 +62,10 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
 }) => {
   // States
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedTime, setSelectedTime] = useState<TimeString | ''>('');
+  const [selectedTime, setSelectedTime] = useState<string>('');
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [isRecurring, setIsRecurring] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<BookingStatus | 'all'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | EnhancedBooking['status']>('all');
   const [error, setError] = useState<string | null>(null);
   
   // Booking Settings states
@@ -165,7 +168,7 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
         userLabel: userLabel?.name || '',
         userLabelColor: userLabel?.color || '#808080',
         date: Timestamp.fromDate(selectedDate),
-        time: selectedTime as TimeString,
+        time: selectedTime,
         recurring: isRecurring ? 'weekly' : 'none',
         ...(isRecurring && { recurringCount: 1 }),
         status: 'confirmed',
@@ -279,7 +282,7 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
               {/* Time Selection */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Select Time</Label>
-                <Select value={selectedTime} onValueChange={(value) => setSelectedTime(value as TimeString)}>
+                <Select value={selectedTime} onValueChange={(value) => setSelectedTime(value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>
@@ -328,7 +331,7 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
           <div className="mt-8">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Existing Bookings</h3>
-              <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as BookingStatus | 'all')}>
+              <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as 'all' | EnhancedBooking['status'])}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
