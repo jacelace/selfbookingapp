@@ -11,14 +11,12 @@ export interface Label {
 }
 
 export type TimeString = 
-  | '9:00 AM'
-  | '9:50 AM'
-  | '10:40 AM'
-  | '11:30 AM'
+  | '10:00 AM'
+  | '11:00 AM'
+  | '12:00 PM'
   | '1:00 PM'
-  | '1:50 PM'
-  | '2:40 PM'
-  | '3:30 PM';
+  | '2:00 PM'
+  | '3:00 PM';
 
 export type RecurringOption = 'none' | 'weekly' | 'biweekly' | 'monthly';
 
