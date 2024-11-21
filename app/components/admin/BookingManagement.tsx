@@ -362,7 +362,10 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
                   <TableRow key={booking.id}>
                     <TableCell>{booking.userName}</TableCell>
                     <TableCell>
-                      <ColorLabel color={booking.userLabelColor || '#808080'}>
+                      <ColorLabel 
+                        name={booking.userLabel || 'No Label'} 
+                        color={booking.userLabelColor || '#808080'}
+                      >
                         {booking.userLabel || 'No Label'}
                       </ColorLabel>
                     </TableCell>
