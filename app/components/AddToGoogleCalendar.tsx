@@ -2,17 +2,17 @@
 
 import { Button } from './ui/button';
 import { Calendar } from 'lucide-react';
+import { EnhancedBooking } from '../types/shared';
 
 export interface AddToGoogleCalendarProps {
-  date: Date;
-  slot: string;
+  booking: EnhancedBooking;
   className?: string;
 }
 
-export default function AddToGoogleCalendar({ date, slot, className }: AddToGoogleCalendarProps) {
+export default function AddToGoogleCalendar({ booking, className }: AddToGoogleCalendarProps) {
   const createGoogleCalendarUrl = () => {
-    const [hours, minutes] = slot.split(':');
-    const startDate = new Date(date);
+    const [hours, minutes] = booking.time.split(':');
+    const startDate = new Date(booking.date);
     startDate.setHours(parseInt(hours), parseInt(minutes), 0);
     
     const endDate = new Date(startDate);
@@ -26,7 +26,7 @@ export default function AddToGoogleCalendar({ date, slot, className }: AddToGoog
       action: 'TEMPLATE',
       text: 'Therapy Session',
       dates: `${formatDate(startDate)}/${formatDate(endDate)}`,
-      details: 'Your therapy session',
+      details: `Therapy session with ${booking.userName || 'your therapist'}`,
     });
 
     return `https://calendar.google.com/calendar/render?${params.toString()}`;
@@ -39,7 +39,7 @@ export default function AddToGoogleCalendar({ date, slot, className }: AddToGoog
       className={className}
       onClick={() => window.open(createGoogleCalendarUrl(), '_blank')}
     >
-      <Calendar className="w-4 h-4 mr-2" />
+      <Calendar className="mr-2 h-4 w-4" />
       Add to Google Calendar
     </Button>
   );
