@@ -104,12 +104,12 @@ function DayBookingsDialog({ date, bookings, open, onOpenChange }: DayBookingsDi
   );
 }
 
-const BookingCalendar: React.FC = () => {
+const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings }) => {
   const [date, setDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [timeOffPeriods, setTimeOffPeriods] = useState<TimeOff[]>([]);
-  const [bookings, setBookings] = useState<EnhancedBooking[]>([]);
+  const [selectedDateBookings, setSelectedDateBookings] = useState<EnhancedBooking[]>([]);
 
   // Fetch time-off periods
   useEffect(() => {
@@ -148,19 +148,19 @@ const BookingCalendar: React.FC = () => {
     return period?.reason;
   };
 
-  // Get bookings for a specific date
-  const getBookingsForDate = (date: Date) => {
-    return bookings.filter(booking => {
-      const bookingDate = safeGetDate(booking.date);
-      return bookingDate && isSameDay(bookingDate, date);
-    });
-  };
-
-  const handleDateSelect = (date: Date | undefined) => {
-    if (date && !isDateInTimeOff(date)) {
-      setSelectedDate(date);
+  useEffect(() => {
+    if (selectedDate) {
+      const dayBookings = bookings.filter(booking => {
+        const bookingDate = safeGetDate(booking.date);
+        return bookingDate && isSameDay(bookingDate, selectedDate);
+      });
+      setSelectedDateBookings(dayBookings);
       setIsDialogOpen(true);
     }
+  }, [selectedDate, bookings]);
+
+  const handleSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
   };
 
   return (
@@ -172,8 +172,8 @@ const BookingCalendar: React.FC = () => {
         <div className="flex items-center justify-center">
           <Calendar
             mode="single"
-            selected={selectedDate}
-            onSelect={handleDateSelect}
+            selected={date}
+            onSelect={handleSelect}
             month={date}
             onMonthChange={setDate}
             className="rounded-md border w-full"
@@ -201,30 +201,30 @@ const BookingCalendar: React.FC = () => {
               day_hidden: "invisible",
             }}
             components={{
-              DayContent: ({ date: dayDate }) => {
-                const dayBookings = getBookingsForDate(dayDate);
-                const isTimeOff = isDateInTimeOff(dayDate);
+              DayContent: (props) => {
+                const dayBookings = bookings.filter(booking => {
+                  const bookingDate = safeGetDate(booking.date);
+                  return bookingDate && isSameDay(bookingDate, props.date);
+                });
+
+                const isTimeOff = timeOffPeriods.some(period => {
+                  const startDate = safeGetDate(period.startDate);
+                  const endDate = safeGetDate(period.endDate);
+                  return startDate && endDate && props.date >= startDate && props.date <= endDate;
+                });
+
                 return (
                   <div className="w-full h-full relative">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      {dayDate.getDate()}
+                    <div className={cn(
+                      "w-full h-full flex items-center justify-center",
+                      isTimeOff && "bg-red-100",
+                      dayBookings.length > 0 && "bg-blue-100"
+                    )}>
+                      {props.day}
+                      {dayBookings.length > 0 && (
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500" />
+                      )}
                     </div>
-                    {!isTimeOff && dayBookings.length > 0 && (
-                      <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-0.5">
-                        {Array.from({ length: Math.min(dayBookings.length, 3) }).map((_, i) => (
-                          <div
-                            key={i}
-                            className="w-1 h-1 rounded-full bg-primary"
-                          />
-                        ))}
-                        {dayBookings.length > 3 && (
-                          <div className="w-1 h-1 rounded-full bg-primary opacity-50" />
-                        )}
-                      </div>
-                    )}
-                    {isTimeOff && (
-                      <div className="absolute inset-0 bg-destructive/20 rounded-md" />
-                    )}
                   </div>
                 );
               }
@@ -232,12 +232,14 @@ const BookingCalendar: React.FC = () => {
           />
         </div>
       </CardContent>
-      <DayBookingsDialog
-        date={selectedDate || new Date()}
-        bookings={bookings}
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-      />
+      {selectedDate && (
+        <DayBookingsDialog
+          date={selectedDate}
+          bookings={selectedDateBookings}
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+        />
+      )}
     </Card>
   );
 }
