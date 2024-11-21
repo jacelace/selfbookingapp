@@ -130,10 +130,17 @@ export default function SuccessPage() {
 
             <AddToGoogleCalendar
               booking={{
-                date: latestBooking.date.toDate(),
+                id: '',  
+                userId: auth.currentUser?.uid || '',
+                userName: userData?.name || '',
+                userLabel: '',
+                userLabelColor: '',
+                date: latestBooking.date,
                 time: latestBooking.slot,
-                duration: latestBooking.duration,
-                userName: userData?.name
+                recurring: 'none',
+                status: 'confirmed',
+                createdAt: latestBooking.date,
+                updatedAt: latestBooking.date
               }}
               className="w-full mt-4"
             />
