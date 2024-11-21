@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
-import { EnhancedBooking, EnhancedUser, TimeString, RecurringOption } from '../types/shared';
+import { EnhancedBooking, EnhancedUser, TimeString, RecurringOption, Timestamp } from '../types/shared';
 
 interface EditBookingFormProps {
   booking: EnhancedBooking;
@@ -26,10 +26,19 @@ export function EditBookingForm({ booking, users, onSave, onCancel }: EditBookin
   const recurringOptions: RecurringOption[] = ['none', 'weekly', 'biweekly', 'monthly'];
 
   const handleInputChange = (field: keyof EnhancedBooking, value: string | number) => {
-    setUpdatedBooking(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setUpdatedBooking(prev => {
+      if (field === 'date') {
+        // Convert the date string to a Timestamp
+        return {
+          ...prev,
+          date: Timestamp.fromDate(new Date(value as string))
+        };
+      }
+      return {
+        ...prev,
+        [field]: value
+      };
+    });
   };
 
   const handleUserChange = (userId: string) => {
@@ -59,6 +68,11 @@ export function EditBookingForm({ booking, users, onSave, onCancel }: EditBookin
     }
   };
 
+  // Convert Timestamp to date string format (YYYY-MM-DD)
+  const formatDateForInput = (timestamp: Timestamp) => {
+    return timestamp.toDate().toISOString().split('T')[0];
+  };
+
   return (
     <Card className="p-6">
       <h2 className="text-xl font-bold mb-4">Edit Booking</h2>
@@ -83,7 +97,7 @@ export function EditBookingForm({ booking, users, onSave, onCancel }: EditBookin
           <label className="block text-sm font-medium mb-1">Date</label>
           <Input
             type="date"
-            value={updatedBooking.date}
+            value={formatDateForInput(updatedBooking.date)}
             onChange={(e) => handleInputChange('date', e.target.value)}
             disabled={loading}
           />
