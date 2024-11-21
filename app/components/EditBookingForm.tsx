@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
-import { EnhancedBooking, EnhancedUser, TimeString, RecurringOption, Timestamp } from '../types/shared';
+import { EnhancedBooking, EnhancedUser, TimeString, RecurringOption } from '../types/shared';
+import { Timestamp } from 'firebase/firestore';
 
 interface EditBookingFormProps {
   booking: EnhancedBooking;
