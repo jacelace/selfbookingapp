@@ -10,7 +10,7 @@ import { toast } from '../ui/use-toast';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Separator } from '../ui/separator';
 
-export const BookingSettings: React.FC = () => {
+const BookingSettings: React.FC = () => {
   const [bookingTimeLimit, setBookingTimeLimit] = useState<number>(48);
   const [cancelTimeLimit, setCancelTimeLimit] = useState<number>(24);
   const [isLoading, setIsLoading] = useState(false);
@@ -130,3 +130,5 @@ export const BookingSettings: React.FC = () => {
     </Card>
   );
 };
+
+export default BookingSettings;

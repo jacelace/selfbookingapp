@@ -20,7 +20,7 @@ interface TimeOffPeriod {
   endDate: Date;
 }
 
-export function TimeOffManagement() {
+const TimeOffManagement: React.FC = () => {
   const [title, setTitle] = useState('');
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
@@ -256,3 +256,5 @@ export function TimeOffManagement() {
     </div>
   );
 }
+
+export default TimeOffManagement;

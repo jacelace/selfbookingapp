@@ -19,7 +19,7 @@ import { useFirebase } from '../../FirebaseProvider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Separator } from '../ui/separator';
-import { TimeOffManagement } from './TimeOffManagement';
+import TimeOffManagement from './TimeOffManagement';
 
 const AdminDashboard: React.FC = () => {
   // Data states

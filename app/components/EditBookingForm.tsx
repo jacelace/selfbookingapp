@@ -14,7 +14,7 @@ interface EditBookingFormProps {
   onCancel: () => void;
 }
 
-export function EditBookingForm({ booking, users, onSave, onCancel }: EditBookingFormProps) {
+const EditBookingForm: React.FC<EditBookingFormProps> = ({ booking, users, onSave, onCancel }) => {
   const [updatedBooking, setUpdatedBooking] = useState<EnhancedBooking>(booking);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -174,3 +174,5 @@ export function EditBookingForm({ booking, users, onSave, onCancel }: EditBookin
     </Card>
   );
 }
+
+export default EditBookingForm;
