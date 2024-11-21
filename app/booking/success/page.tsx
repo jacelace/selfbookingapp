@@ -9,6 +9,7 @@ import { auth, db } from "../../firebase/clientApp";
 import { collection, query, where, getDocs, orderBy, limit, getDoc, doc, Timestamp } from 'firebase/firestore';
 import AddToGoogleCalendar from "../../components/AddToGoogleCalendar";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import { EnhancedUser, EnhancedBooking, TimeString } from "../../types/shared";
 
 interface Booking {
   date: { toDate: () => Date };
@@ -75,6 +76,26 @@ export default function SuccessPage() {
   const isRecurringBooking = bookings.some(booking => booking.isRecurring);
   const bookingCount = bookings.length;
 
+  // Helper function to convert slot to TimeString
+  const convertToTimeString = (slot: string): TimeString => {
+    // Map the slot to a valid TimeString
+    const timeMap: Record<string, TimeString> = {
+      '9:00': '9:00 AM',
+      '9:50': '9:50 AM',
+      '10:40': '10:40 AM',
+      '11:30': '11:30 AM',
+      '13:00': '1:00 PM',
+      '13:50': '1:50 PM',
+      '14:40': '2:40 PM',
+      '15:30': '3:30 PM'
+    } as const;
+
+    // Extract hour and minutes from the slot
+    const [hour, minutes] = slot.split(':');
+    const key = `${hour}:${minutes}`;
+    return timeMap[key] || '9:00 AM'; // Default to 9:00 AM if no match
+  };
+
   return (
     <div className="container flex items-center justify-center min-h-screen py-10 px-4">
       <Card className="w-full max-w-2xl">
@@ -123,7 +144,7 @@ export default function SuccessPage() {
                 <Clock className="w-5 h-5 text-gray-500" />
                 <div>
                   <p className="text-sm text-gray-500">Time</p>
-                  <p className="font-medium">{latestBooking.slot} ({latestBooking.duration})</p>
+                  <p className="font-medium">{convertToTimeString(latestBooking.slot)} ({latestBooking.duration})</p>
                 </div>
               </div>
             </div>
@@ -136,7 +157,7 @@ export default function SuccessPage() {
                 userLabel: '',
                 userLabelColor: '',
                 date: Timestamp.fromDate(latestBooking.date.toDate()),
-                time: latestBooking.slot,
+                time: convertToTimeString(latestBooking.slot),
                 recurring: 'none',
                 status: 'confirmed',
                 createdAt: Timestamp.fromDate(latestBooking.date.toDate()),
