@@ -129,8 +129,12 @@ export default function SuccessPage() {
             </div>
 
             <AddToGoogleCalendar
-              date={latestBooking.date.toDate()}
-              slot={latestBooking.slot}
+              booking={{
+                date: latestBooking.date.toDate(),
+                time: latestBooking.slot,
+                duration: latestBooking.duration,
+                userName: userData?.name
+              }}
               className="w-full mt-4"
             />
           </div>
