@@ -22,7 +22,7 @@ import ColorLabel from '../ColorLabel';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { TimeOffManagement } from './TimeOffManagement';
+import TimeOffManagement from './TimeOffManagement';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';

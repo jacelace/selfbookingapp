@@ -3,6 +3,7 @@
 interface ColorLabelProps {
   children?: React.ReactNode;
   color?: string;
+  name?: string;
 }
 
 function getContrastColor(hexColor: string = '#808080') {
@@ -16,19 +17,20 @@ function getContrastColor(hexColor: string = '#808080') {
   return (yiq >= 128) ? '#000000' : '#FFFFFF';
 }
 
-export default function ColorLabel({ children, color = '#808080' }: ColorLabelProps) {
+export default function ColorLabel({ children, color = '#808080', name }: ColorLabelProps) {
   // Ensure color is a valid hex color
   const validColor = /^#[0-9A-F]{6}$/i.test(color) ? color : '#808080';
-  
+  const textColor = getContrastColor(validColor);
+
   return (
-    <span
-      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+    <div
+      className="px-3 py-1 rounded-full text-sm"
       style={{
         backgroundColor: validColor,
-        color: getContrastColor(validColor)
+        color: textColor,
       }}
     >
-      {children}
-    </span>
+      {name || children}
+    </div>
   );
 }
