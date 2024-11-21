@@ -24,12 +24,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onUpdateUser, on
       setUpdating(user.id);
       const userRef = doc(db, 'users', user.id);
       
-      // If changing approval status or sessions, update remaining bookings
+      // If changing approval status or sessions, update remaining bookings and status
       if ('isApproved' in changes || 'sessions' in changes) {
         const newSessions = changes.sessions ?? user.sessions;
         const newIsApproved = changes.isApproved ?? user.isApproved;
         
         changes.remainingBookings = newIsApproved ? newSessions : 0;
+        changes.status = newIsApproved ? 'approved' : 'pending';
       }
 
       await updateDoc(userRef, changes);

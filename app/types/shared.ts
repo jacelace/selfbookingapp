@@ -27,6 +27,8 @@ export type SessionCount = number;
 
 export type UserRole = 'admin' | 'user';
 
+export type UserStatus = 'pending' | 'approved' | 'rejected';
+
 export interface EnhancedUser {
   id: string;
   name: string;
@@ -41,6 +43,7 @@ export interface EnhancedUser {
   isAdmin: boolean;
   isApproved: boolean;
   role: UserRole;
+  status: UserStatus;
   createdAt?: string;
   createdBy?: string;
   updatedAt?: string;
