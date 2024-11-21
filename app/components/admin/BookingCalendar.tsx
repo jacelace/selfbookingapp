@@ -217,13 +217,13 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings }) => {
                 });
 
                 return (
-                  <div className="w-full h-full relative">
+                  <div className="relative w-full h-full">
                     <div className={cn(
                       "w-full h-full flex items-center justify-center",
                       isTimeOff && "bg-red-100",
                       dayBookings.length > 0 && "bg-blue-100"
                     )}>
-                      {props.day}
+                      {props.date.getDate()}
                       {dayBookings.length > 0 && (
                         <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500" />
                       )}
