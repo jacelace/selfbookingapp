@@ -39,7 +39,7 @@ export function EditBookingForm({ booking, users, onSave, onCancel }: EditBookin
         ...prev,
         userId: selectedUser.id,
         userName: selectedUser.name,
-        userLabel: selectedUser.label.name
+        userLabel: selectedUser.userLabel
       }));
     }
   };
