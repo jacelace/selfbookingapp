@@ -22,7 +22,7 @@ interface LabelManagementProps {
   setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export const LabelManagement: React.FC<LabelManagementProps> = ({
+const LabelManagement: React.FC<LabelManagementProps> = ({
   labels,
   setLabels,
   isSubmitting,
@@ -225,3 +225,5 @@ export const LabelManagement: React.FC<LabelManagementProps> = ({
     </div>
   );
 };
+
+export default LabelManagement;

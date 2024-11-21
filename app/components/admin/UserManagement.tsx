@@ -25,7 +25,7 @@ interface UserManagementProps {
   setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export const UserManagement: React.FC<UserManagementProps> = ({
+const UserManagement: React.FC<UserManagementProps> = ({
   users,
   labels,
   setUsers,
@@ -306,3 +306,5 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     </div>
   );
 };
+
+export default UserManagement;
