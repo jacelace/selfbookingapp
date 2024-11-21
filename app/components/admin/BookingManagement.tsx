@@ -233,7 +233,7 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
               {/* User Selection */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Select User</Label>
-                <Select value={selectedUser} onValueChange={setSelectedUser}>
+                <Select value={selectedUser} onValueChange={(value) => setSelectedUser(value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select user" />
                   </SelectTrigger>
@@ -282,7 +282,10 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
               {/* Time Selection */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Select Time</Label>
-                <Select value={selectedTime} onValueChange={(value) => setSelectedTime(value)}>
+                <Select 
+                  value={selectedTime} 
+                  onValueChange={(value: TimeString | '') => setSelectedTime(value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select time" />
                   </SelectTrigger>
