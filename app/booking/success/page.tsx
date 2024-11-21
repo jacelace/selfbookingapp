@@ -6,7 +6,7 @@ import { Button } from "../../components/ui/button";
 import Link from "next/link";
 import { CheckCircle2, Calendar, Clock, ArrowRight, Home } from "lucide-react";
 import { auth, db } from "../../firebase/clientApp";
-import { collection, query, where, getDocs, orderBy, limit, getDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, getDoc, doc, Timestamp } from 'firebase/firestore';
 import AddToGoogleCalendar from "../../components/AddToGoogleCalendar";
 import LoadingSpinner from "../../components/LoadingSpinner";
 
@@ -130,17 +130,17 @@ export default function SuccessPage() {
 
             <AddToGoogleCalendar
               booking={{
-                id: '',  
+                id: '',
                 userId: auth.currentUser?.uid || '',
                 userName: userData?.name || '',
                 userLabel: '',
                 userLabelColor: '',
-                date: latestBooking.date,
+                date: Timestamp.fromDate(latestBooking.date.toDate()),
                 time: latestBooking.slot,
                 recurring: 'none',
                 status: 'confirmed',
-                createdAt: latestBooking.date,
-                updatedAt: latestBooking.date
+                createdAt: Timestamp.fromDate(latestBooking.date.toDate()),
+                updatedAt: Timestamp.fromDate(latestBooking.date.toDate())
               }}
               className="w-full mt-4"
             />
