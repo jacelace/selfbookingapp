@@ -104,11 +104,12 @@ function DayBookingsDialog({ date, bookings, open, onOpenChange }: DayBookingsDi
   );
 }
 
-export function BookingCalendar({ bookings }: BookingCalendarProps) {
+const BookingCalendar: React.FC = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [timeOffPeriods, setTimeOffPeriods] = useState<TimeOff[]>([]);
+  const [bookings, setBookings] = useState<EnhancedBooking[]>([]);
 
   // Fetch time-off periods
   useEffect(() => {
@@ -240,3 +241,5 @@ export function BookingCalendar({ bookings }: BookingCalendarProps) {
     </Card>
   );
 }
+
+export default BookingCalendar;

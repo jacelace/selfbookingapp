@@ -22,7 +22,7 @@ interface CreateUserFormProps {
   onSuccess?: () => void;
 }
 
-export function CreateUserForm({ labels, isSubmitting, setIsSubmitting, onSuccess }: CreateUserFormProps) {
+const CreateUserForm: React.FC<CreateUserFormProps> = ({ labels, isSubmitting, setIsSubmitting, onSuccess }) => {
   const { user: adminUser, isAdmin } = useFirebase();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -176,4 +176,6 @@ export function CreateUserForm({ labels, isSubmitting, setIsSubmitting, onSucces
       </Button>
     </form>
   );
-}
+};
+
+export default CreateUserForm;

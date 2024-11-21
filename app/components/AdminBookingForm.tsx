@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { collection, getDoc, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase/clientApp';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
