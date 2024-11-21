@@ -102,9 +102,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onUpdateUser, on
                 <td className="p-2">
                   <div 
                     className="inline-block px-2 py-1 rounded" 
-                    style={{ backgroundColor: user.label.color }}
+                    style={{ backgroundColor: user.labelColor || '#808080' }}
                   >
-                    {user.label.name}
+                    {user.userLabel || 'No Label'}
                   </div>
                 </td>
                 <td className="p-2">{user.totalBookings}</td>

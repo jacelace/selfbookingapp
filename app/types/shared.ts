@@ -36,6 +36,7 @@ export interface EnhancedUser {
   sessions: SessionCount;
   labelId: string;
   userLabel: string;
+  labelColor: string;
   totalBookings: BookingCount;
   remainingBookings: BookingCount;
   totalSessions: SessionCount;

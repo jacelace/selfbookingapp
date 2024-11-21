@@ -73,7 +73,7 @@ export function EditBookingForm({ booking, users, onSave, onCancel }: EditBookin
           >
             {users.map(user => (
               <option key={user.id} value={user.id}>
-                {user.name} ({user.label.name})
+                {user.name} ({user.userLabel})
               </option>
             ))}
           </select>
