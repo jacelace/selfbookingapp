@@ -20,7 +20,7 @@ export type TimeString =
   | '2:40 PM'
   | '3:30 PM';
 
-export type RecurringOption = 'none' | 'weekly';
+export type RecurringOption = 'none' | 'weekly' | 'biweekly' | 'monthly';
 
 export type BookingStatus = 'confirmed' | 'cancelled';
 
