@@ -47,7 +47,10 @@ export const CustomCalendar: React.FC<CustomCalendarProps> = ({ selectedDate, on
 
   const getBookingsForDate = (date: Date): EnhancedBooking[] => {
     const dateString = date.toISOString().split('T')[0];
-    return bookings.filter(booking => booking.date === dateString);
+    return bookings.filter(booking => {
+      const bookingDate = booking.date.toDate().toISOString().split('T')[0];
+      return bookingDate === dateString;
+    });
   };
 
   const getBookingColor = (userLabel: string): string => {
