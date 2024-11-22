@@ -316,34 +316,11 @@ const AdminDashboard: React.FC = () => {
           />
         </TabsContent>
         <TabsContent value="users" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="col-span-2">
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>
-                  View and manage user accounts
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <UserManagement
-                  users={users}
-                  labels={labels}
-                  onRefresh={fetchUsers}
-                />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Create User</CardTitle>
-                <CardDescription>
-                  Add a new user account
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <CreateUserForm onSuccess={fetchUsers} />
-              </CardContent>
-            </Card>
-          </div>
+          <UserManagement
+            users={users}
+            labels={labels}
+            onRefresh={fetchUsers}
+          />
         </TabsContent>
         <TabsContent value="labels" className="space-y-4">
           <LabelManagement
