@@ -31,7 +31,6 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLabelSubmitting, setIsLabelSubmitting] = useState(false);
   
   // Firebase state
   const { user, isAdmin, loading: authLoading } = useFirebase();
@@ -253,7 +252,7 @@ const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto py-8 px-6 space-y-8">
+    <div className="container mx-auto p-4 space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
@@ -294,14 +293,14 @@ const AdminDashboard: React.FC = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="bookings" className="space-y-8">
-        <TabsList className="grid w-full grid-cols-4 gap-6">
-          <TabsTrigger value="bookings" className="text-lg">Bookings</TabsTrigger>
-          <TabsTrigger value="calendar" className="text-lg">Calendar</TabsTrigger>
-          <TabsTrigger value="users" className="text-lg">Users</TabsTrigger>
-          <TabsTrigger value="labels" className="text-lg">Labels</TabsTrigger>
+      <Tabs defaultValue="bookings" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="bookings">Bookings</TabsTrigger>
+          <TabsTrigger value="calendar">Calendar</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="labels">Labels</TabsTrigger>
         </TabsList>
-        <TabsContent value="bookings" className="space-y-6">
+        <TabsContent value="bookings" className="space-y-4">
           <BookingManagement
             bookings={bookings}
             users={users}
@@ -309,25 +308,45 @@ const AdminDashboard: React.FC = () => {
             onRefresh={fetchBookings}
           />
         </TabsContent>
-        <TabsContent value="calendar" className="space-y-6">
+        <TabsContent value="calendar" className="space-y-4">
           <BookingCalendar
             bookings={bookings}
             onRefresh={fetchBookings}
           />
         </TabsContent>
-        <TabsContent value="users" className="space-y-6">
-          <UserManagement
-            users={users}
-            labels={labels}
-            onRefresh={fetchUsers}
-          />
+        <TabsContent value="users" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle>Create User</CardTitle>
+                <CardDescription>
+                  Add a new user account
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CreateUserForm onSuccess={fetchUsers} />
+              </CardContent>
+            </Card>
+            <Card className="col-span-2">
+              <CardHeader>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>
+                  View and manage user accounts
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <UserManagement
+                  users={users}
+                  labels={labels}
+                  onRefresh={fetchUsers}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
-        <TabsContent value="labels" className="space-y-6">
+        <TabsContent value="labels" className="space-y-4">
           <LabelManagement
             labels={labels}
-            setLabels={setLabels}
-            isSubmitting={isLabelSubmitting}
-            setIsSubmitting={setIsLabelSubmitting}
             onRefresh={fetchLabels}
           />
         </TabsContent>

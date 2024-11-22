@@ -16,53 +16,63 @@ import { useFirebase } from '../../FirebaseProvider';
 import type { Label as LabelType } from '../../types';
 
 interface CreateUserFormProps {
-  labels?: LabelType[];
+  labels: LabelType[];
+  isSubmitting: boolean;
+  setIsSubmitting: (value: boolean) => void;
   onSuccess?: () => void;
 }
 
-const CreateUserForm: React.FC<CreateUserFormProps> = ({ 
-  labels = [], 
-  onSuccess 
-}) => {
+const CreateUserForm: React.FC<CreateUserFormProps> = ({ labels, isSubmitting, setIsSubmitting, onSuccess }) => {
   const { user: adminUser, isAdmin } = useFirebase();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedLabel, setSelectedLabel] = useState('');
   const [sessions, setSessions] = useState('');
   const [isApproved, setIsApproved] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAdmin) return;
+    
+    if (!adminUser || !isAdmin) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in as an admin to create users',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!email || !password || !selectedLabel || !sessions) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all fields',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     try {
       setIsSubmitting(true);
 
-      // Create user in Firebase Auth
+      // Create the user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
 
-      // Create user document in Firestore
-      const userRef = doc(db, 'users', newUser.uid);
-      const numSessions = parseInt(sessions) || 0;
-
-      await setDoc(userRef, {
-        id: newUser.uid,
-        email: newUser.email,
-        name: email.split('@')[0], // Use part of email as name
-        role: 'user',
-        status: isApproved ? 'approved' : 'pending',
-        isAdmin: false,
-        isApproved,
-        labelId: selectedLabel,
-        sessions: numSessions,
-        totalSessions: numSessions,
-        totalBookings: 0,
-        remainingBookings: 0,
+      // Create the user document in Firestore
+      await setDoc(doc(db, 'users', newUser.uid), {
+        email: email,
+        label: selectedLabel,
+        sessions: parseInt(sessions),
+        remainingSessions: parseInt(sessions),
+        status: isApproved ? 'active' : 'pending',
         createdAt: new Date(),
-        createdBy: adminUser?.email || 'system',
-        updatedAt: new Date().toISOString(),
+        updatedAt: new Date(),
+        createdBy: adminUser.uid,
+      });
+
+      toast({
+        title: 'Success',
+        description: `User ${email} created successfully${isApproved ? ' and approved' : ' (pending approval)'}`,
       });
 
       // Reset form
@@ -72,20 +82,16 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({
       setSessions('');
       setIsApproved(false);
 
-      // Show success message
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error: any) {
+      console.error('Error creating user:', error);
       toast({
-        title: "Success",
-        description: "User created successfully",
-      });
-
-      // Call onSuccess callback
-      onSuccess?.();
-    } catch (err) {
-      console.error('Error creating user:', err);
-      toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to create user",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to create user',
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
