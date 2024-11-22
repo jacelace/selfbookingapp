@@ -40,9 +40,21 @@ const AdminDashboard: React.FC = () => {
   const pendingUsers = users.filter(user => !user.isApproved).length;
   const totalBookings = bookings.length;
   const upcomingBookings = bookings.filter(booking => {
-    const bookingDate = booking.date instanceof Timestamp ? booking.date.toDate() : booking.date;
+    if (!booking.date) return false;
+    const bookingDate = booking.date instanceof Timestamp ? booking.date.toDate() : new Date(booking.date);
     return bookingDate >= new Date(new Date().setHours(0, 0, 0, 0));
   }).length;
+
+  // Error handling
+  const handleError = (error: unknown, message: string) => {
+    console.error(`${message}:`, error);
+    setError(message);
+    toast({
+      title: "Error",
+      description: message,
+      variant: "destructive",
+    });
+  };
 
   // Clear error after 5 seconds
   useEffect(() => {
@@ -83,16 +95,15 @@ const AdminDashboard: React.FC = () => {
           totalSessions: data.totalSessions || 0,
           sessions: data.sessions || 0,
           createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(new Date()),
-          createdBy: data.createdBy,
-          updatedAt: data.updatedAt,
+          createdBy: data.createdBy || '',
+          updatedAt: data.updatedAt || new Date().toISOString(),
           _timestamp: Date.now()
         } as EnhancedUser;
       });
       
       setUsers(updatedUsers);
     } catch (err) {
-      console.error('Error fetching users:', err);
-      setError('Failed to fetch users');
+      handleError(err, 'Failed to fetch users');
     }
   };
 
@@ -119,9 +130,9 @@ const AdminDashboard: React.FC = () => {
           status: data.status || 'pending',
           recurring: data.recurring || 'none',
           recurringCount: data.recurringCount || 0,
-          labelId: data.labelId,
-          labelName: data.labelName,
-          labelColor: data.labelColor,
+          labelId: data.labelId || '',
+          labelName: data.labelName || '',
+          labelColor: data.labelColor || '#000000',
           notes: data.notes || '',
           createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(new Date()),
           createdBy: data.createdBy || '',
@@ -132,8 +143,7 @@ const AdminDashboard: React.FC = () => {
       
       setBookings(updatedBookings);
     } catch (err) {
-      console.error('Error fetching bookings:', err);
-      setError('Failed to fetch bookings');
+      handleError(err, 'Failed to fetch bookings');
     }
   };
 
@@ -153,15 +163,14 @@ const AdminDashboard: React.FC = () => {
           isDefault: data.isDefault || false,
           createdAt: data.createdAt || new Date().toISOString(),
           createdBy: data.createdBy || '',
-          updatedAt: data.updatedAt,
+          updatedAt: data.updatedAt || new Date().toISOString(),
           _timestamp: Date.now()
         } as LabelType;
       });
       
       setLabels(updatedLabels);
     } catch (err) {
-      console.error('Error fetching labels:', err);
-      setError('Failed to fetch labels');
+      handleError(err, 'Failed to fetch labels');
     }
   };
 
@@ -193,8 +202,7 @@ const AdminDashboard: React.FC = () => {
           fetchLabels()
         ]);
       } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to fetch data');
+        handleError(err, 'Failed to fetch data');
       } finally {
         setLoading(false);
       }
@@ -208,9 +216,11 @@ const AdminDashboard: React.FC = () => {
     if (!isAdmin) return;
 
     const refreshInterval = setInterval(() => {
-      fetchUsers();
-      fetchBookings();
-      fetchLabels();
+      Promise.all([
+        fetchUsers(),
+        fetchBookings(),
+        fetchLabels()
+      ]).catch(err => handleError(err, 'Failed to refresh data'));
     }, 10000);
 
     return () => clearInterval(refreshInterval);
@@ -225,7 +235,20 @@ const AdminDashboard: React.FC = () => {
   }
 
   if (!user || !isAdmin) {
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900">Access Denied</h2>
+          <p className="mt-2 text-gray-600">You do not have permission to access this page.</p>
+          <Link href="/" className="mt-4 inline-block">
+            <Button variant="default">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Home
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
