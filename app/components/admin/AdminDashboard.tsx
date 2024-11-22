@@ -68,13 +68,24 @@ const AdminDashboard: React.FC = () => {
       const updatedUsers = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
-          ...data,
           id: doc.id,
-          _timestamp: Date.now(),
           name: data.name || '',
           email: data.email || '',
           role: data.role || 'user',
-          createdAt: data.createdAt || new Date().toISOString()
+          status: data.status || 'pending',
+          isAdmin: data.isAdmin || false,
+          isApproved: data.isApproved || false,
+          labelId: data.labelId,
+          userLabel: data.userLabel,
+          labelColor: data.labelColor,
+          totalBookings: data.totalBookings || 0,
+          remainingBookings: data.remainingBookings || 0,
+          totalSessions: data.totalSessions || 0,
+          sessions: data.sessions || 0,
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(new Date()),
+          createdBy: data.createdBy,
+          updatedAt: data.updatedAt,
+          _timestamp: Date.now()
         } as EnhancedUser;
       });
       
@@ -99,15 +110,23 @@ const AdminDashboard: React.FC = () => {
       const updatedBookings = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
-          ...data,
           id: doc.id,
-          _timestamp: Date.now(),
-          date: data.date instanceof Timestamp ? data.date : Timestamp.fromDate(new Date(data.date)),
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(new Date(data.createdAt)),
-          updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt : Timestamp.fromDate(new Date(data.updatedAt)),
           userId: data.userId || '',
           userName: data.userName || '',
-          status: data.status || 'pending'
+          userEmail: data.userEmail || '',
+          date: data.date instanceof Timestamp ? data.date : Timestamp.fromDate(new Date(data.date || Date.now())),
+          time: data.time || '10:00 AM',
+          status: data.status || 'pending',
+          recurring: data.recurring || 'none',
+          recurringCount: data.recurringCount || 0,
+          labelId: data.labelId,
+          labelName: data.labelName,
+          labelColor: data.labelColor,
+          notes: data.notes || '',
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(new Date()),
+          createdBy: data.createdBy || '',
+          updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt : Timestamp.fromDate(new Date()),
+          _timestamp: Date.now()
         } as EnhancedBooking;
       });
       
@@ -128,11 +147,14 @@ const AdminDashboard: React.FC = () => {
       const updatedLabels = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
-          ...data,
           id: doc.id,
-          _timestamp: Date.now(),
           name: data.name || '',
-          color: data.color || '#000000'
+          color: data.color || '#000000',
+          isDefault: data.isDefault || false,
+          createdAt: data.createdAt || new Date().toISOString(),
+          createdBy: data.createdBy || '',
+          updatedAt: data.updatedAt,
+          _timestamp: Date.now()
         } as LabelType;
       });
       
