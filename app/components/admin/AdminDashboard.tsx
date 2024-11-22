@@ -253,7 +253,7 @@ const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-8">
+    <div className="container mx-auto py-8 px-6 space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
@@ -294,14 +294,14 @@ const AdminDashboard: React.FC = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="bookings" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="bookings">Bookings</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="labels">Labels</TabsTrigger>
+      <Tabs defaultValue="bookings" className="space-y-8">
+        <TabsList className="grid w-full grid-cols-4 gap-6">
+          <TabsTrigger value="bookings" className="text-lg">Bookings</TabsTrigger>
+          <TabsTrigger value="calendar" className="text-lg">Calendar</TabsTrigger>
+          <TabsTrigger value="users" className="text-lg">Users</TabsTrigger>
+          <TabsTrigger value="labels" className="text-lg">Labels</TabsTrigger>
         </TabsList>
-        <TabsContent value="bookings" className="space-y-4">
+        <TabsContent value="bookings" className="space-y-6">
           <BookingManagement
             bookings={bookings}
             users={users}
@@ -309,20 +309,20 @@ const AdminDashboard: React.FC = () => {
             onRefresh={fetchBookings}
           />
         </TabsContent>
-        <TabsContent value="calendar" className="space-y-4">
+        <TabsContent value="calendar" className="space-y-6">
           <BookingCalendar
             bookings={bookings}
             onRefresh={fetchBookings}
           />
         </TabsContent>
-        <TabsContent value="users" className="space-y-4">
+        <TabsContent value="users" className="space-y-6">
           <UserManagement
             users={users}
             labels={labels}
             onRefresh={fetchUsers}
           />
         </TabsContent>
-        <TabsContent value="labels" className="space-y-4">
+        <TabsContent value="labels" className="space-y-6">
           <LabelManagement
             labels={labels}
             setLabels={setLabels}
