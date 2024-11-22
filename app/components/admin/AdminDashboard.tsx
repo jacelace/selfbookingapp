@@ -352,6 +352,9 @@ const AdminDashboard: React.FC = () => {
         <TabsContent value="labels" className="space-y-4">
           <LabelManagement
             labels={labels}
+            setLabels={setLabels}
+            isSubmitting={isSubmitting}
+            setIsSubmitting={setIsSubmitting}
             onRefresh={fetchLabels}
           />
         </TabsContent>
