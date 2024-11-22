@@ -65,11 +65,18 @@ const AdminDashboard: React.FC = () => {
       );
       
       const snapshot = await getDocs(usersQuery);
-      const updatedUsers = snapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id,
-        _timestamp: Date.now()
-      })) as EnhancedUser[];
+      const updatedUsers = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          id: doc.id,
+          _timestamp: Date.now(),
+          name: data.name || '',
+          email: data.email || '',
+          role: data.role || 'user',
+          createdAt: data.createdAt || new Date().toISOString()
+        } as EnhancedUser;
+      });
       
       setUsers(updatedUsers);
     } catch (err) {
@@ -97,7 +104,10 @@ const AdminDashboard: React.FC = () => {
           _timestamp: Date.now(),
           date: data.date instanceof Timestamp ? data.date : Timestamp.fromDate(new Date(data.date)),
           createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(new Date(data.createdAt)),
-          updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt : Timestamp.fromDate(new Date(data.updatedAt))
+          updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt : Timestamp.fromDate(new Date(data.updatedAt)),
+          userId: data.userId || '',
+          userName: data.userName || '',
+          status: data.status || 'pending'
         } as EnhancedBooking;
       });
       
@@ -115,11 +125,16 @@ const AdminDashboard: React.FC = () => {
     try {
       const labelsQuery = query(collection(db, 'labels'));
       const snapshot = await getDocs(labelsQuery);
-      const updatedLabels = snapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id,
-        _timestamp: Date.now()
-      })) as LabelType[];
+      const updatedLabels = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          id: doc.id,
+          _timestamp: Date.now(),
+          name: data.name || '',
+          color: data.color || '#000000'
+        } as LabelType;
+      });
       
       setLabels(updatedLabels);
     } catch (err) {
