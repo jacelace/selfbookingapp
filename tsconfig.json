@@ -26,7 +26,7 @@
     "paths": {
       "@/*": ["./*"]
     },
-    "types": ["node", "jest", "@types/babel__core"]
+    "types": ["node", "jest"]
   },
   "include": [
     "next-env.d.ts",
