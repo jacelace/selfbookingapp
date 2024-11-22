@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, enableIndexedDbPersistence, getFirestore } from 'firebase/firestore';
 import { auth, db } from './firebase/clientApp';
 import { Card } from './components/ui/card';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -48,9 +48,16 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Disable persistence by default
+    const db = getFirestore();
+    enableIndexedDbPersistence(db).catch((err) => {
+      console.error('Error enabling persistence:', err);
+    });
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
+          // Always fetch fresh user data
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           const userData = userDoc.data();
           setState({
@@ -92,6 +99,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         loading: false,
         error: 'Error signing in with test credentials',
       }));
+      throw error;
     }
   };
 
@@ -104,7 +112,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       setState(prev => ({
         ...prev,
         loading: false,
-        error: 'Invalid email or password',
+        error: 'Error signing in',
       }));
       throw error;
     }
@@ -115,20 +123,23 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       setState(prev => ({ ...prev, loading: true, error: null }));
       await signOut(auth);
     } catch (error) {
-      console.error('Sign-out error:', error);
+      console.error('Logout error:', error);
       setState(prev => ({
         ...prev,
         loading: false,
         error: 'Error signing out',
       }));
+      throw error;
     }
   };
 
   if (state.loading) {
     return (
-      <Card className="flex h-screen items-center justify-center">
-        <LoadingSpinner />
-      </Card>
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="p-4">
+          <LoadingSpinner />
+        </Card>
+      </div>
     );
   }
 
