@@ -11,8 +11,10 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
-      router.push('/');  // Redirect to main page if not admin
+    if (!loading && !user) {
+      router.push('/login');  // Redirect to login page if not authenticated
+    } else if (!loading && !isAdmin) {
+      router.push('/');  // Redirect to main page if authenticated but not admin
     }
   }, [user, loading, isAdmin, router]);
 
