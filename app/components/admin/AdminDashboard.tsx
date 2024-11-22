@@ -67,7 +67,8 @@ const AdminDashboard: React.FC = () => {
       const snapshot = await getDocs(usersQuery);
       const updatedUsers = snapshot.docs.map(doc => ({
         ...doc.data(),
-        id: doc.id
+        id: doc.id,
+        _timestamp: Date.now()
       })) as EnhancedUser[];
       
       setUsers(updatedUsers);
@@ -93,6 +94,7 @@ const AdminDashboard: React.FC = () => {
         return {
           ...data,
           id: doc.id,
+          _timestamp: Date.now(),
           date: data.date instanceof Timestamp ? data.date : Timestamp.fromDate(new Date(data.date)),
           createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(new Date(data.createdAt)),
           updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt : Timestamp.fromDate(new Date(data.updatedAt))
@@ -115,7 +117,8 @@ const AdminDashboard: React.FC = () => {
       const snapshot = await getDocs(labelsQuery);
       const updatedLabels = snapshot.docs.map(doc => ({
         ...doc.data(),
-        id: doc.id
+        id: doc.id,
+        _timestamp: Date.now()
       })) as LabelType[];
       
       setLabels(updatedLabels);
@@ -125,13 +128,28 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Initial data fetch
+  // Initial data fetch and cache clearing
   useEffect(() => {
     if (!isAdmin) return;
     
     const fetchData = async () => {
       setLoading(true);
       try {
+        // Clear any browser storage
+        if (typeof window !== 'undefined') {
+          localStorage.clear();
+          sessionStorage.clear();
+          
+          // Clear IndexedDB
+          const databases = await window.indexedDB.databases();
+          databases.forEach(db => {
+            if (db.name) {
+              window.indexedDB.deleteDatabase(db.name);
+            }
+          });
+        }
+
+        // Fetch fresh data
         await Promise.all([
           fetchUsers(),
           fetchBookings(),
@@ -156,7 +174,7 @@ const AdminDashboard: React.FC = () => {
       fetchUsers();
       fetchBookings();
       fetchLabels();
-    }, 30000); // Refresh every 30 seconds
+    }, 10000);
 
     return () => clearInterval(refreshInterval);
   }, [isAdmin]);

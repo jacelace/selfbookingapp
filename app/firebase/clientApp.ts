@@ -2,7 +2,7 @@
 
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { getFirestore, enableIndexedDbPersistence, initializeFirestore, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -17,22 +17,14 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
 
-// Use session persistence instead of local persistence
+// Initialize Firestore with persistence disabled
+const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true, // This ensures we always get fresh data
+  cacheSizeBytes: 0, // Disable cache completely
+});
+
+// Use session persistence for auth instead of local persistence
 setPersistence(auth, browserSessionPersistence);
-
-// Disable offline persistence
-const initFirestore = async () => {
-  try {
-    await enableIndexedDbPersistence(db);
-  } catch (err) {
-    console.error('Error enabling persistence:', err);
-  }
-};
-
-if (typeof window !== 'undefined') {
-  initFirestore();
-}
 
 export { app, auth, db };
