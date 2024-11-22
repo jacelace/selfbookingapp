@@ -2,7 +2,7 @@
 
 import { Button } from './ui/button';
 import { Calendar } from 'lucide-react';
-import { EnhancedBooking } from '../types/shared';
+import { EnhancedBooking } from '../types';
 
 export interface AddToGoogleCalendarProps {
   booking: EnhancedBooking;

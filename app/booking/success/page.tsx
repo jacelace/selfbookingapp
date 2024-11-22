@@ -9,7 +9,7 @@ import { auth, db } from "../../firebase/clientApp";
 import { collection, query, where, getDocs, orderBy, limit, getDoc, doc, Timestamp } from 'firebase/firestore';
 import AddToGoogleCalendar from "../../components/AddToGoogleCalendar";
 import LoadingSpinner from "../../components/LoadingSpinner";
-import { EnhancedUser, EnhancedBooking, TimeString } from "../../types/shared";
+import { EnhancedUser, EnhancedBooking, TimeString } from "../../types";
 
 interface Booking {
   date: { toDate: () => Date };

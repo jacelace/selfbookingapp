@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { collection, addDoc, deleteDoc, getDocs, Timestamp } from 'firebase/firestore';
+import { doc, collection, addDoc, deleteDoc, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase/clientApp';
 import { toast } from '../ui/use-toast';
 import { format } from 'date-fns';
@@ -130,7 +130,7 @@ const TimeOffManagement: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this time-off period?')) {
       try {
-        await deleteDoc(collection(db, 'timeOff', id));
+        await deleteDoc(doc(db, 'timeOff', id));
         setTimeOffPeriods(timeOffPeriods.filter(period => period.id !== id));
         toast({
           title: 'Success',

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from './ui/checkbox';
 import { collection, addDoc, updateDoc, Timestamp, doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/clientApp';
-import type { TimeString, RecurringOption } from '../types/shared';
+import type { TimeString, RecurringType } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 import { useToast } from './ui/use-toast';
 
@@ -67,7 +67,7 @@ export default function UserBookingForm() {
         userLabelColor: userData.labelColor || '#808080',
         date: Timestamp.fromDate(selectedDate),
         time: selectedTime,
-        recurring: isRecurring ? 'weekly' as RecurringOption : 'none' as RecurringOption,
+        recurring: isRecurring ? 'weekly' as RecurringType : 'none' as RecurringType,
         ...(isRecurring && { recurringCount: 1 }),
         status: 'confirmed' as const,
         createdAt: now,

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/clientApp';
-import { EnhancedUser } from '../types/shared';
+import { EnhancedUser } from '../types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Switch } from './ui/switch';

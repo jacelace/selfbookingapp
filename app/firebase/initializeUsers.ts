@@ -1,7 +1,7 @@
 'use client';
 
 import { auth } from './clientApp';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
 import { doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
 import { TEST_CREDENTIALS } from '../lib/constants';
 

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Trash2, Edit, Calendar } from 'lucide-react';
-import { EnhancedUser, EnhancedBooking, TimeString } from '../types/shared';
+import { EnhancedUser, EnhancedBooking, TimeString } from '../types';
 import AddToGoogleCalendar from './AddToGoogleCalendar';
 import { Button } from './ui/button';
 

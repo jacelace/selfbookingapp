@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TimeString } from '../types/shared';
+import { TimeString } from '../types';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 

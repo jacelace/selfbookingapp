@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, isSameDay, startOfMonth, endOfMonth } from 'date-fns';
-import type { EnhancedBooking } from '../../types/shared';
+import type { EnhancedBooking } from '../../types';
 import ColorLabel from '../ColorLabel';
 import { cn } from '../../lib/utils';
 import { Timestamp } from 'firebase/firestore';
@@ -38,15 +38,9 @@ const timeSlots = [
   '1:00 PM', '2:00 PM', '3:00 PM'
 ].map(time => time);
 
-// Helper function to safely convert Timestamp to Date
-const safeGetDate = (date: Timestamp | undefined): Date | null => {
-  if (!date || !date.toDate) return null;
-  try {
-    return date.toDate();
-  } catch (error) {
-    console.error('Error converting timestamp to date:', error);
-    return null;
-  }
+// Helper function to safely get Date from Timestamp or Date
+const safeGetDate = (date: Date | Timestamp): Date => {
+  return date instanceof Timestamp ? date.toDate() : date;
 };
 
 function DayBookingsDialog({ date, bookings, open, onOpenChange }: DayBookingsDialogProps) {

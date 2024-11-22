@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      let user = getUser();
+      return user != null && user.data.isAdmin == true;
+    }
+
+    // Users collection rules
+    match /users/{userId} {
+      // Anyone can read their own document
+      // Admins can read all documents
+      allow read: if isSignedIn() && 
+                 (request.auth.uid == userId || isAdmin());
+      
+      // Only admins can create new users
+      allow create: if isSignedIn() && isAdmin();
+      
+      // Users can update their own basic info
+      // Admins can update any user
+      allow update: if isSignedIn() && 
+                   (request.auth.uid == userId || isAdmin());
+      
+      // Only admins can delete users
+      allow delete: if isSignedIn() && isAdmin();
+    }
+
+    // Labels collection rules
+    match /labels/{labelId} {
+      // Anyone signed in can read labels
+      allow read: if isSignedIn();
+      // Only admins can write to labels
+      allow write: if isSignedIn() && isAdmin();
+    }
+
+    // Bookings collection rules
+    match /bookings/{bookingId} {
+      // Anyone signed in can read bookings
+      allow read: if isSignedIn();
+      
+      // Anyone signed in can create bookings
+      allow create: if isSignedIn();
+      
+      // Users can update their own bookings
+      // Admins can update any booking
+      allow update: if isSignedIn() && 
+                   (request.auth.uid == resource.data.userId || isAdmin());
+      
+      // Only admins can delete bookings
+      allow delete: if isSignedIn() && isAdmin();
+    }
+  }
+}

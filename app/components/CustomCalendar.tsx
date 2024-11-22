@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { EnhancedBooking } from '../types/shared';
+import { EnhancedBooking } from '../types';
 
 interface CustomCalendarProps {
   selectedDate: Date;
@@ -45,15 +45,18 @@ export const CustomCalendar: React.FC<CustomCalendarProps> = ({ selectedDate, on
     onDateSelect(new Date(currentYear, currentMonth, day));
   };
 
-  const getBookingsForDate = (date: Date): EnhancedBooking[] => {
+  const getBookingsForDate = (date: Date) => {
     const dateString = date.toISOString().split('T')[0];
     return bookings.filter(booking => {
-      const bookingDate = booking.date.toDate().toISOString().split('T')[0];
-      return bookingDate === dateString;
+      const bookingDate = booking.date instanceof Date 
+        ? booking.date.toISOString() 
+        : booking.date.toDate().toISOString();
+      return bookingDate.split('T')[0] === dateString;
     });
   };
 
-  const getBookingColor = (userLabel: string): string => {
+  const getBookingColor = (userLabel?: string): string => {
+    if (!userLabel) return 'bg-gray-500';
     switch (userLabel.toLowerCase()) {
       case 'vip':
         return 'bg-yellow-200';

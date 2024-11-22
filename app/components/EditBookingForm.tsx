@@ -4,18 +4,18 @@ import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
-import { EnhancedBooking, EnhancedUser, TimeString, RecurringOption } from '../types/shared';
+import { EnhancedBooking, EnhancedUser, TimeString, RecurringType } from '../types';
 import { Timestamp } from 'firebase/firestore';
 
 interface EditBookingFormProps {
-  booking: EnhancedBooking;
+  booking: EnhancedBooking & { date: Timestamp };
   users: EnhancedUser[];
   onSave: (updatedBooking: EnhancedBooking) => Promise<void>;
   onCancel: () => void;
 }
 
 const EditBookingForm: React.FC<EditBookingFormProps> = ({ booking, users, onSave, onCancel }) => {
-  const [updatedBooking, setUpdatedBooking] = useState<EnhancedBooking>(booking);
+  const [updatedBooking, setUpdatedBooking] = useState<EnhancedBooking & { date: Timestamp }>(booking);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +24,7 @@ const EditBookingForm: React.FC<EditBookingFormProps> = ({ booking, users, onSav
     '1:00 PM', '2:00 PM', '3:00 PM'
   ] as TimeString[];
 
-  const recurringOptions: RecurringOption[] = ['none', 'weekly', 'biweekly', 'monthly'];
+  const recurringOptions: RecurringType[] = ['none', 'weekly', 'biweekly', 'monthly'];
 
   const handleInputChange = (field: keyof EnhancedBooking, value: string | number) => {
     setUpdatedBooking(prev => {
@@ -70,8 +70,9 @@ const EditBookingForm: React.FC<EditBookingFormProps> = ({ booking, users, onSav
   };
 
   // Convert Timestamp to date string format (YYYY-MM-DD)
-  const formatDateForInput = (timestamp: Timestamp) => {
-    return timestamp.toDate().toISOString().split('T')[0];
+  const formatDateForInput = (date: Timestamp) => {
+    const d = date.toDate();
+    return d.toISOString().split('T')[0];
   };
 
   return (
@@ -124,7 +125,7 @@ const EditBookingForm: React.FC<EditBookingFormProps> = ({ booking, users, onSav
           <label className="block text-sm font-medium mb-1">Recurring</label>
           <select
             value={updatedBooking.recurring}
-            onChange={(e) => handleInputChange('recurring', e.target.value as RecurringOption)}
+            onChange={(e) => handleInputChange('recurring', e.target.value as RecurringType)}
             className="w-full p-2 border rounded"
             disabled={loading}
           >

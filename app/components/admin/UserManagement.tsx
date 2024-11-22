@@ -6,7 +6,7 @@ import { Button } from '../ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../firebase/clientApp';
-import type { EnhancedUser, Label as LabelType } from '../../types/shared';
+import type { EnhancedUser, Label as LabelType } from '../../types';
 import LoadingSpinner from '../LoadingSpinner';
 import { TEST_CREDENTIALS } from '../../lib/constants';
 import { toast } from '../ui/use-toast';
@@ -63,6 +63,35 @@ const UserManagement: React.FC<UserManagementProps> = ({
       toast({
         title: "Error",
         description: "Failed to update user label",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateUserSessions = async (userId: string, sessions: number) => {
+    try {
+      setIsSubmitting(true);
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, { sessions });
+      
+      // Update local state
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId ? { ...user, sessions } : user
+        )
+      );
+      
+      toast({
+        title: "Success",
+        description: "User sessions updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating user sessions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user sessions",
         variant: "destructive",
       });
     } finally {

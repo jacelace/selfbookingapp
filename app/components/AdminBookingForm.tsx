@@ -8,7 +8,7 @@ import { Card } from './ui/card';
 import { Switch } from './ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { toast } from './ui/use-toast';
-import { EnhancedUser } from '../types/shared';
+import { EnhancedUser } from '../types';
 
 interface AdminBookingFormProps {
   selectedDate: Date;

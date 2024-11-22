@@ -6,7 +6,7 @@ import { ArrowLeft, Users, Calendar, Tag, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { collection, query, doc, getDoc, setDoc, onSnapshot, orderBy, Timestamp } from 'firebase/firestore';
 import { db, auth } from '../../firebase/clientApp';
-import type { EnhancedUser, EnhancedBooking, Label as LabelType } from '../../types/shared';
+import type { EnhancedUser, EnhancedBooking, Label as LabelType } from '../../types';
 import LoadingSpinner from '../LoadingSpinner';
 import { TEST_CREDENTIALS } from '../../lib/constants';
 import UserManagement from './UserManagement';
@@ -39,9 +39,10 @@ const AdminDashboard: React.FC = () => {
   const totalUsers = users.length;
   const pendingUsers = users.filter(user => !user.isApproved).length;
   const totalBookings = bookings.length;
-  const upcomingBookings = bookings.filter(booking => 
-    booking.date.toDate() >= new Date(new Date().setHours(0, 0, 0, 0))
-  ).length;
+  const upcomingBookings = bookings.filter(booking => {
+    const bookingDate = booking.date instanceof Timestamp ? booking.date.toDate() : booking.date;
+    return bookingDate >= new Date(new Date().setHours(0, 0, 0, 0));
+  }).length;
 
   // Clear error after 5 seconds
   useEffect(() => {

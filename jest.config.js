@@ -1,5 +1,5 @@
 module.exports = {
-  preset: undefined,
+  preset: 'ts-jest',
   testEnvironment: 'jsdom',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   transform: {
@@ -31,20 +31,22 @@ module.exports = {
     '**/?(*.)+(spec|test).[jt]s?(x)'
   ],
   collectCoverageFrom: [
-    'src/**/*.{js,jsx,ts,tsx}',
-    '!src/**/*.d.ts',
-    '!src/index.tsx',
+    'app/**/*.{js,jsx,ts,tsx}',
+    '!app/**/*.d.ts',
+    '!app/layout.tsx',
+    '!app/page.tsx'
   ],
   coveragePathIgnorePatterns: [
     '/node_modules/',
     '/__tests__/',
-    '/dist/'
+    '/.next/'
   ],
   transformIgnorePatterns: [
     '/node_modules/(?!(@firebase|firebase)/)'
   ],
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/__tests__/setup.ts'
+    '/__tests__/setup.ts',
+    '/.next/'
   ]
 }

@@ -9,8 +9,8 @@ import { X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { collection, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../firebase/clientApp';
-import type { Label as LabelType } from '../../types/shared';
-import ColorLabel from '../ColorLabel/ColorLabel';
+import type { Label as LabelType } from '../../types';
+import ColorLabel from '../ColorLabel';
 import LoadingSpinner from '../LoadingSpinner';
 import { TEST_CREDENTIALS } from '../../lib/constants';
 import { toast } from '../ui/use-toast';
@@ -29,7 +29,7 @@ const LabelManagement: React.FC<LabelManagementProps> = ({
   setIsSubmitting
 }) => {
   // Form states
-  const [newLabel, setNewLabel] = useState<LabelType>({ name: '', color: '#000000', isDefault: false });
+  const [newLabel, setNewLabel] = useState<LabelType>({ id: '', name: '', color: '#000000', isDefault: false });
   const [error, setError] = useState<string | null>(null);
 
   const handleCreateLabel = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -69,7 +69,7 @@ const LabelManagement: React.FC<LabelManagementProps> = ({
       setLabels(prevLabels => [...prevLabels, { ...labelData, id: docRef.id }]);
 
       // Reset form
-      setNewLabel({ name: '', color: '#000000', isDefault: false });
+      setNewLabel({ id: '', name: '', color: '#000000', isDefault: false });
 
       console.log('Label added successfully:', labelData);
     } catch (err) {

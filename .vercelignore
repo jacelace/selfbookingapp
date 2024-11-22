@@ -1,0 +1,12 @@
+.git
+.env.local
+node_modules
+.next
+coverage
+README.md
+.gitignore
+__tests__
+__mocks__
+*.test.ts
+*.test.tsx
+jest.config.js

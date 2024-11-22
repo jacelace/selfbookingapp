@@ -13,7 +13,7 @@ import { db } from '../../firebase/clientApp';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase/clientApp';
 import { useFirebase } from '../../FirebaseProvider';
-import type { Label as LabelType } from '../../types/shared';
+import type { Label as LabelType } from '../../types';
 
 interface CreateUserFormProps {
   labels: LabelType[];
