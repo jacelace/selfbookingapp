@@ -17,6 +17,7 @@ import { db } from '../../firebase/clientApp';
 
 interface BookingCalendarProps {
   bookings: EnhancedBooking[];
+  onRefresh?: () => void;
 }
 
 interface TimeOff {
@@ -101,7 +102,7 @@ function DayBookingsDialog({ date, bookings, open, onOpenChange }: DayBookingsDi
   );
 }
 
-const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings }) => {
+const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings, onRefresh }) => {
   const [date, setDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
