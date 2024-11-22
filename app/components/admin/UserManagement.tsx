@@ -184,17 +184,17 @@ const UserManagement: React.FC<UserManagementProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-5 gap-4">
-      {/* Create User Form - Takes up 2 columns */}
-      <div className="col-span-2">
+    <div className="grid grid-cols-3 gap-4">
+      {/* Create User Form - Takes up 1 column */}
+      <div className="col-span-1">
         <CreateUserForm 
           labels={labels}
           onSuccess={onRefresh}
         />
       </div>
 
-      {/* User List - Takes up 3 columns */}
-      <div className="col-span-3 space-y-4">
+      {/* User List - Takes up 2 columns */}
+      <div className="col-span-2 space-y-4">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center space-x-2">
             <Switch
