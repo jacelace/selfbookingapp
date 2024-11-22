@@ -3,10 +3,10 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { collection, Timestamp } from 'firebase/firestore';
-import { db } from '@/app/firebase/firebaseInit';
+import { db } from '../firebase/firebaseInit';
 import { format } from 'date-fns';
-import { cn } from '@/app/lib/utils';
-import { EnhancedBooking, EnhancedUser, Label } from '@/app/types';
+import { cn } from '../../lib/utils';
+import { EnhancedBooking, EnhancedUser, Label } from '../types';
 
 interface BookingManagementProps {
   users: EnhancedUser[];
