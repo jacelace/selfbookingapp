@@ -326,6 +326,7 @@ const AdminDashboard: React.FC = () => {
               <CardContent>
                 <UserManagement
                   users={users}
+                  labels={labels}
                   onRefresh={fetchUsers}
                 />
               </CardContent>

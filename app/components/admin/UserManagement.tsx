@@ -19,23 +19,18 @@ import CreateUserForm from './CreateUserForm';
 
 interface UserManagementProps {
   users: EnhancedUser[];
-  labels: LabelType[];
-  setUsers: React.Dispatch<React.SetStateAction<EnhancedUser[]>>;
-  isSubmitting: boolean;
-  setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
+  labels?: LabelType[];
   onRefresh?: () => void;
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({
   users,
-  labels,
-  setUsers,
-  isSubmitting,
-  setIsSubmitting,
+  labels = [],
   onRefresh
 }) => {
   const [error, setError] = useState<string | null>(null);
   const [showPendingOnly, setShowPendingOnly] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const pendingUsers = users.filter(user => user.status === 'pending');
   const approvedUsers = users.filter(user => user.status === 'approved');
@@ -49,19 +44,15 @@ const UserManagement: React.FC<UserManagementProps> = ({
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, { labelId });
       
-      // Update local state
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.id === userId ? { ...user, labelId } : user
-        )
-      );
+      // Refresh the users list
+      onRefresh?.();
       
       toast({
         title: "Success",
         description: "User label updated successfully",
       });
-    } catch (error) {
-      console.error('Error updating user label:', error);
+    } catch (err) {
+      console.error('Error updating user label:', err);
       toast({
         title: "Error",
         description: "Failed to update user label",
@@ -78,12 +69,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, { sessions });
       
-      // Update local state
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.id === userId ? { ...user, sessions } : user
-        )
-      );
+      // Refresh the users list
+      onRefresh?.();
       
       toast({
         title: "Success",
@@ -119,8 +106,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
       // Delete the user document
       await deleteDoc(doc(db, 'users', userId));
 
-      // Update local state
-      setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+      // Refresh the users list
+      onRefresh?.();
       console.log('User deleted successfully');
     } catch (err) {
       console.error('Error deleting user:', err);
@@ -162,19 +149,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
           updatedAt: new Date().toISOString()
         });
 
-        // Update local state
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.id === userId 
-              ? { 
-                  ...user, 
-                  status: 'approved',
-                  remainingBookings: numSessions,
-                  totalBookings: numSessions
-                }
-              : user
-          )
-        );
+        // Refresh the users list
+        onRefresh?.();
 
         toast({
           title: 'Success',
@@ -187,13 +163,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
           updatedAt: new Date().toISOString()
         });
 
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.id === userId 
-              ? { ...user, status: 'pending' }
-              : user
-          )
-        );
+        // Refresh the users list
+        onRefresh?.();
 
         toast({
           title: 'Success',
