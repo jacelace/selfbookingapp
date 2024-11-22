@@ -12,9 +12,7 @@ interface BookingManagementProps {
   users: EnhancedUser[];
   bookings: EnhancedBooking[];
   labels: Label[];
-  setBookings: React.Dispatch<React.SetStateAction<EnhancedBooking[]>>;
-  isSubmitting: boolean;
-  setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
+  onRefresh?: () => void;
 }
 
 // Helper function to format dates
@@ -32,92 +30,96 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
   users,
   bookings,
   labels,
-  setBookings,
-  isSubmitting,
-  setIsSubmitting
+  onRefresh
 }) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Function to handle booking updates
+  const handleBookingUpdate = async (bookingId: string, updates: Partial<EnhancedBooking>) => {
+    setIsLoading(true);
+    try {
+      // Update booking logic here
+      onRefresh?.();
+    } catch (error) {
+      console.error('Error updating booking:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div>
-      <div className="rounded-md border">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Time
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Recurring
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Label
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {bookings.map((booking) => (
-              <tr key={booking.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {booking.user?.name || 'Unknown'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {formatDate(booking.date)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {booking.time}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={cn(
-                    "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                    {
-                      'bg-yellow-100 text-yellow-800': booking.status === 'pending',
-                      'bg-green-100 text-green-800': booking.status === 'confirmed',
-                      'bg-red-100 text-red-800': booking.status === 'cancelled',
-                      'bg-blue-100 text-blue-800': booking.status === 'completed'
-                    }
-                  )}>
-                    {booking.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={cn(
-                    "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                    {
-                      'bg-gray-100 text-gray-800': booking.recurring === 'none',
-                      'bg-blue-100 text-blue-800': booking.recurring === 'weekly',
-                      'bg-purple-100 text-purple-800': booking.recurring === 'biweekly',
-                      'bg-indigo-100 text-indigo-800': booking.recurring === 'monthly'
-                    }
-                  )}>
-                    {booking.recurring}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {booking.label?.name || 'None'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    className="text-indigo-600 hover:text-indigo-900"
-                    onClick={() => {/* Handle edit */}}
-                  >
-                    Edit
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="space-y-4">
+      <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div className="p-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">Bookings</h3>
+            <button
+              onClick={onRefresh}
+              disabled={isLoading}
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+            >
+              Refresh
+            </button>
+          </div>
+          <div className="mt-4">
+            <div className="rounded-md border">
+              <div className="grid grid-cols-6 gap-4 p-4 font-medium">
+                <div>Date</div>
+                <div>Time</div>
+                <div>User</div>
+                <div>Label</div>
+                <div>Status</div>
+                <div>Actions</div>
+              </div>
+              <div className="divide-y">
+                {bookings.map((booking) => (
+                  <div key={booking.id} className="grid grid-cols-6 gap-4 p-4">
+                    <div>{formatDate(booking.date)}</div>
+                    <div>{booking.time}</div>
+                    <div>{booking.userName}</div>
+                    <div>
+                      <span
+                        className="inline-block w-3 h-3 rounded-full mr-2"
+                        style={{ backgroundColor: booking.labelColor }}
+                      />
+                      {booking.labelName}
+                    </div>
+                    <div>
+                      <span className={cn(
+                        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                        booking.status === 'confirmed' && "bg-green-100 text-green-800",
+                        booking.status === 'pending' && "bg-yellow-100 text-yellow-800",
+                        booking.status === 'cancelled' && "bg-red-100 text-red-800"
+                      )}>
+                        {booking.status}
+                      </span>
+                    </div>
+                    <div className="space-x-2">
+                      {booking.status === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => handleBookingUpdate(booking.id, { status: 'confirmed' })}
+                            disabled={isLoading}
+                            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3"
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() => handleBookingUpdate(booking.id, { status: 'cancelled' })}
+                            disabled={isLoading}
+                            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-destructive text-destructive-foreground hover:bg-destructive/90 h-8 px-3"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

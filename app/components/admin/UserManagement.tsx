@@ -23,6 +23,7 @@ interface UserManagementProps {
   setUsers: React.Dispatch<React.SetStateAction<EnhancedUser[]>>;
   isSubmitting: boolean;
   setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
+  onRefresh?: () => void;
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({
@@ -30,7 +31,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
   labels,
   setUsers,
   isSubmitting,
-  setIsSubmitting
+  setIsSubmitting,
+  onRefresh
 }) => {
   const [error, setError] = useState<string | null>(null);
   const [showPendingOnly, setShowPendingOnly] = useState(false);

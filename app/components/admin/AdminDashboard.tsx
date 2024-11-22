@@ -282,10 +282,7 @@ const AdminDashboard: React.FC = () => {
             bookings={bookings}
             users={users}
             labels={labels}
-            onRefresh={() => {
-              fetchBookings();
-              fetchUsers();
-            }}
+            onRefresh={fetchBookings}
           />
         </TabsContent>
         <TabsContent value="calendar" className="space-y-4">

@@ -20,13 +20,15 @@ interface LabelManagementProps {
   setLabels: React.Dispatch<React.SetStateAction<LabelType[]>>;
   isSubmitting: boolean;
   setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
+  onRefresh?: () => void;
 }
 
 const LabelManagement: React.FC<LabelManagementProps> = ({
   labels,
   setLabels,
   isSubmitting,
-  setIsSubmitting
+  setIsSubmitting,
+  onRefresh
 }) => {
   // Form states
   const [newLabel, setNewLabel] = useState<LabelType>({ id: '', name: '', color: '#000000', isDefault: false });
