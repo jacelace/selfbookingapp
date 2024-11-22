@@ -31,6 +31,7 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLabelSubmitting, setIsLabelSubmitting] = useState(false);
   
   // Firebase state
   const { user, isAdmin, loading: authLoading } = useFirebase();
@@ -347,6 +348,9 @@ const AdminDashboard: React.FC = () => {
         <TabsContent value="labels" className="space-y-4">
           <LabelManagement
             labels={labels}
+            setLabels={setLabels}
+            isSubmitting={isLabelSubmitting}
+            setIsSubmitting={setIsLabelSubmitting}
             onRefresh={fetchLabels}
           />
         </TabsContent>

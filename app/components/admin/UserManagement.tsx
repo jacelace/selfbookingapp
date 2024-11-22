@@ -189,8 +189,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
       <div className="col-span-2">
         <CreateUserForm 
           labels={labels}
-          isSubmitting={isSubmitting}
-          setIsSubmitting={setIsSubmitting}
+          onSuccess={onRefresh}
         />
       </div>
 
