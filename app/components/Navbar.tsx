@@ -6,7 +6,6 @@ import { User } from 'firebase/auth';
 import { useFirebase } from '../FirebaseProvider';
 import { Button } from './ui/button';
 import LoadingSpinner from './LoadingSpinner';
-import { clearIndexedDbPersistence, getFirestore } from 'firebase/firestore';
 
 export default function Navbar() {
   const { user, logout, loading, isAdmin } = useFirebase();
@@ -16,31 +15,6 @@ export default function Navbar() {
       await logout();
     } catch (error) {
       console.error('Error logging out:', error);
-    }
-  };
-
-  const handleClearCacheAndLogout = async () => {
-    try {
-      // Clear Firestore cache
-      const db = getFirestore();
-      await clearIndexedDbPersistence(db);
-      
-      // Clear localStorage
-      localStorage.clear();
-      
-      // Clear sessionStorage
-      sessionStorage.clear();
-      
-      // Sign out
-      await logout();
-      
-      // Force reload the page to ensure everything is fresh
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Error clearing cache:', error);
-      // If clearing cache fails, just logout
-      await logout();
-      window.location.href = '/login';
     }
   };
 
@@ -83,18 +57,11 @@ export default function Navbar() {
                   </Link>
                 )}
                 <Button
-                  variant="destructive"
-                  onClick={handleClearCacheAndLogout}
-                >
-                  Clear Cache & Sign Out
-                </Button>
-                <Button
                   onClick={handleLogout}
                   variant="outline"
-                  size="sm"
                   className="ml-4"
                 >
-                  Logout
+                  Sign Out
                 </Button>
               </>
             ) : (

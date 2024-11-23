@@ -13,6 +13,8 @@ function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
   const router = useRouter();
   const { signInWithTest, signInWithCredentials, user, isAdmin } = useFirebase();
 
@@ -21,7 +23,7 @@ function LoginPage() {
       if (isAdmin) {
         router.push('/admin/dashboard');
       } else {
-        router.push('/');
+        router.push('/booking');
       }
     }
   }, [user, isAdmin, router]);
@@ -37,12 +39,17 @@ function LoginPage() {
         title: 'Success',
         description: 'Logged in successfully',
       });
-    } catch (err) {
-      toast({
-        title: 'Error',
-        description: 'Failed to login. Please check your credentials.',
-        variant: 'destructive',
-      });
+    } catch (err: any) {
+      if (err.message === 'Account pending approval') {
+        setPendingApproval(true);
+        setPendingEmail(email);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to login. Please check your credentials.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -88,43 +95,74 @@ function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  required
-                  disabled={loading}
-                  autoComplete="email"
-                  className="w-full"
-                />
+            {pendingApproval ? (
+              <div className="space-y-4">
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                  <div className="flex">
+                    <div className="ml-3">
+                      <h3 className="text-lg font-medium text-yellow-800">
+                        Account Pending Approval
+                      </h3>
+                      <div className="mt-2 text-yellow-700">
+                        <p>The account for <span className="font-medium">{pendingEmail}</span> is pending administrator approval.</p>
+                        <p className="mt-2">Please check back later to sign in. You will be notified when your account is approved.</p>
+                      </div>
+                      <div className="mt-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setPendingApproval(false);
+                            setPendingEmail('');
+                            setEmail('');
+                            setPassword('');
+                          }}
+                        >
+                          Back to Sign In
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Password
-                </label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                  disabled={loading}
-                  autoComplete="current-password"
-                  className="w-full"
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                Sign In
-              </Button>
-            </form>
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium">
+                    Email
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    required
+                    disabled={loading}
+                    autoComplete="email"
+                    className="w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium">
+                    Password
+                  </label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    required
+                    disabled={loading}
+                    autoComplete="current-password"
+                    className="w-full"
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  Sign In
+                </Button>
+              </form>
+            )}
             <div className="mt-4">
               <Button
                 type="button"

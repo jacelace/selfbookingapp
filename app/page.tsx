@@ -56,16 +56,17 @@ export default function Home() {
             role: 'user',
             remainingBookings: 0,
             totalBookings: 0,
+            isApproved: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           });
 
+          // Sign out the user until they're approved
+          await signOut(auth);
+          
           // Set pending status for UI
           setPendingApproval(true);
           setPendingEmail(email);
-          
-          // Sign out the user until they're approved
-          await signOut(auth);
         } catch (firestoreError) {
           console.error('Firestore Error:', firestoreError);
           // If Firestore creation fails, delete the auth user
@@ -80,11 +81,13 @@ export default function Home() {
         const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
         const userData = userDoc.data();
 
-        if (userData?.status === 'pending') {
+        if (!userData || userData.status === 'pending' || userData.isApproved === false) {
           // Sign out if not approved
           await signOut(auth);
           setPendingApproval(true);
           setPendingEmail(email);
+        } else if (userData.role === 'admin') {
+          router.push('/admin/dashboard');
         } else {
           router.push('/booking');
         }

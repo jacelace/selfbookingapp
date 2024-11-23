@@ -106,13 +106,23 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   const signInWithCredentials = async (email: string, password: string) => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Check user's approval status
+      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+      const userData = userDoc.data();
+      
+      if (!userData || userData.status === 'pending' || userData.isApproved === false) {
+        // Sign out if not approved
+        await signOut(auth);
+        throw new Error('Account pending approval');
+      }
     } catch (error) {
       console.error('Sign-in error:', error);
       setState(prev => ({
         ...prev,
         loading: false,
-        error: 'Error signing in',
+        error: error instanceof Error ? error.message : 'Error signing in',
       }));
       throw error;
     }
