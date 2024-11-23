@@ -21,7 +21,7 @@ const auth = getAuth(app);
 // Initialize Firestore with persistence disabled
 const db = initializeFirestore(app, {
   experimentalForceLongPolling: true, // This ensures we always get fresh data
-  cacheSizeBytes: 0, // Disable cache completely
+  cacheSizeBytes: 1048576, // Minimum cache size (1MB)
 });
 
 // Use session persistence for auth instead of local persistence
