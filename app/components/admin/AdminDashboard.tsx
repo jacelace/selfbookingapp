@@ -295,13 +295,37 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       <Tabs defaultValue="bookings" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="bookings">Bookings</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="labels">Labels</TabsTrigger>
-          <TabsTrigger value="timeoff">Time Off</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 h-auto bg-gradient-to-r from-slate-50 to-gray-50 p-1 rounded-lg">
+          <TabsTrigger 
+            value="bookings"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-md py-3 text-sm font-medium"
+          >
+            <BookOpen className="w-4 h-4 mr-2" />
+            Bookings
+          </TabsTrigger>
+          <TabsTrigger 
+            value="users"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-md py-3 text-sm font-medium"
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Calendar/Users
+          </TabsTrigger>
+          <TabsTrigger 
+            value="labels"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-rose-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-md py-3 text-sm font-medium"
+          >
+            <Tag className="w-4 h-4 mr-2" />
+            Labels
+          </TabsTrigger>
+          <TabsTrigger 
+            value="timeoff"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-orange-500 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-md py-3 text-sm font-medium"
+          >
+            <Calendar className="w-4 h-4 mr-2" />
+            Time Off
+          </TabsTrigger>
         </TabsList>
+
         <TabsContent value="bookings" className="space-y-4">
           <BookingManagement
             bookings={bookings}
@@ -310,20 +334,36 @@ const AdminDashboard: React.FC = () => {
             onRefresh={fetchBookings}
           />
         </TabsContent>
-        <TabsContent value="calendar" className="space-y-4">
-          <BookingCalendar
-            bookings={bookings}
-            onRefresh={fetchBookings}
-          />
-        </TabsContent>
         <TabsContent value="users" className="space-y-4">
-          <UserManagement
-            users={users}
-            labels={labels}
-            isSubmitting={isSubmitting}
-            setIsSubmitting={setIsSubmitting}
-            onRefresh={fetchUsers}
-          />
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Booking Calendar</CardTitle>
+                <CardDescription>View and manage upcoming bookings</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <BookingCalendar
+                  bookings={bookings}
+                  onRefresh={fetchBookings}
+                />
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-slate-50 to-gray-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">User Management</CardTitle>
+                <CardDescription>View and manage user accounts</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <UserManagement
+                  users={users}
+                  labels={labels}
+                  isSubmitting={isSubmitting}
+                  setIsSubmitting={setIsSubmitting}
+                  onRefresh={fetchUsers}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
         <TabsContent value="labels" className="space-y-4">
           <LabelManagement
