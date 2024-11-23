@@ -100,25 +100,23 @@ const UserManagement: React.FC<UserManagementProps> = ({
     setError(null);
 
     try {
-      // Check if we're logged in as admin
-      const currentUser = auth.currentUser;
-      if (!currentUser || currentUser.email !== TEST_CREDENTIALS.email) {
-        throw new Error('Unauthorized: Only admins can delete users');
-      }
-
       // Delete the user document
       await deleteDoc(doc(db, 'users', userId));
 
       // Refresh the users list
       onRefresh?.();
-      console.log('User deleted successfully');
+      
+      toast({
+        title: 'Success',
+        description: 'User deleted successfully',
+      });
     } catch (err) {
       console.error('Error deleting user:', err);
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Failed to delete user. Please try again.');
-      }
+      toast({
+        title: 'Error',
+        description: 'Failed to delete user. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -147,8 +145,10 @@ const UserManagement: React.FC<UserManagementProps> = ({
         const userRef = doc(db, 'users', userId);
         await updateDoc(userRef, {
           status: 'approved',
+          isApproved: true,
           remainingBookings: numSessions,
           totalBookings: numSessions,
+          sessions: numSessions,
           updatedAt: new Date().toISOString()
         });
 
@@ -163,6 +163,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
         const userRef = doc(db, 'users', userId);
         await updateDoc(userRef, {
           status: 'pending',
+          isApproved: false,
           updatedAt: new Date().toISOString()
         });
 

@@ -182,20 +182,6 @@ const AdminDashboard: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Clear any browser storage
-        if (typeof window !== 'undefined') {
-          localStorage.clear();
-          sessionStorage.clear();
-          
-          // Clear IndexedDB
-          const databases = await window.indexedDB.databases();
-          databases.forEach(db => {
-            if (db.name) {
-              window.indexedDB.deleteDatabase(db.name);
-            }
-          });
-        }
-
         // Fetch fresh data
         await Promise.all([
           fetchUsers(),
@@ -222,7 +208,7 @@ const AdminDashboard: React.FC = () => {
         fetchBookings(),
         fetchLabels()
       ]).catch(err => handleError(err, 'Failed to refresh data'));
-    }, 10000);
+    }, 30000); // Increased refresh interval to 30 seconds
 
     return () => clearInterval(refreshInterval);
   }, [isAdmin]);
