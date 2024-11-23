@@ -14,12 +14,12 @@ import LabelManagement from './LabelManagement';
 import BookingManagement from './BookingManagement';
 import BookingCalendar from './BookingCalendar';
 import CreateUserForm from './CreateUserForm';
+import TimeOffManagement from './TimeOffManagement';
 import { toast } from '../ui/use-toast';
 import { useFirebase } from '../../FirebaseProvider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Separator } from '../ui/separator';
-import TimeOffManagement from './TimeOffManagement';
 
 const AdminDashboard: React.FC = () => {
   // Data states
@@ -31,9 +31,10 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLabelSubmitting, setIsLabelSubmitting] = useState(false);
   
   // Firebase state
-  const { user: adminUser, isAdmin, loading: authLoading } = useFirebase();
+  const { user, isAdmin, loading: authLoading } = useFirebase();
 
   // Computed values
   const totalUsers = users.length;
@@ -234,7 +235,7 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
-  if (!adminUser || !isAdmin) {
+  if (!user || !isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -299,6 +300,7 @@ const AdminDashboard: React.FC = () => {
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="labels">Labels</TabsTrigger>
+          <TabsTrigger value="timeoff">Time Off</TabsTrigger>
         </TabsList>
         <TabsContent value="bookings" className="space-y-4">
           <BookingManagement
@@ -315,48 +317,25 @@ const AdminDashboard: React.FC = () => {
           />
         </TabsContent>
         <TabsContent value="users" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Create User</CardTitle>
-                <CardDescription>
-                  Add a new user account
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <CreateUserForm 
-                  labels={labels}
-                  isSubmitting={isSubmitting}
-                  setIsSubmitting={setIsSubmitting}
-                  onSuccess={fetchUsers}
-                />
-              </CardContent>
-            </Card>
-            <Card className="col-span-2">
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>
-                  View and manage user accounts
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <UserManagement
-                  users={users}
-                  labels={labels}
-                  onRefresh={fetchUsers}
-                />
-              </CardContent>
-            </Card>
-          </div>
+          <UserManagement
+            users={users}
+            labels={labels}
+            isSubmitting={isSubmitting}
+            setIsSubmitting={setIsSubmitting}
+            onRefresh={fetchUsers}
+          />
         </TabsContent>
         <TabsContent value="labels" className="space-y-4">
           <LabelManagement
             labels={labels}
             setLabels={setLabels}
-            isSubmitting={isSubmitting}
-            setIsSubmitting={setIsSubmitting}
+            isSubmitting={isLabelSubmitting}
+            setIsSubmitting={setIsLabelSubmitting}
             onRefresh={fetchLabels}
           />
+        </TabsContent>
+        <TabsContent value="timeoff" className="space-y-4">
+          <TimeOffManagement />
         </TabsContent>
       </Tabs>
     </div>
