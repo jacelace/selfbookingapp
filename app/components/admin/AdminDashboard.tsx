@@ -38,7 +38,7 @@ const AdminDashboard: React.FC = () => {
 
   // Computed values
   const totalUsers = users.length;
-  const pendingUsers = users.filter(user => !user.isApproved).length;
+  const pendingUsers = users.filter(user => user.status === 'pending' || !user.isApproved).length;
   const totalBookings = bookings.length;
   const upcomingBookings = bookings.filter(booking => {
     if (!booking.date) return false;

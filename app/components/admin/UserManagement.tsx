@@ -35,8 +35,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showPendingOnly, setShowPendingOnly] = useState(false);
   
-  const pendingUsers = users.filter(user => user.status === 'pending');
-  const approvedUsers = users.filter(user => user.status === 'approved');
+  const pendingUsers = users.filter(user => user.status === 'pending' || !user.isApproved);
+  const approvedUsers = users.filter(user => user.status === 'approved' && user.isApproved);
   // Combine pending users first, followed by approved users
   const sortedUsers = [...pendingUsers, ...approvedUsers];
   const displayUsers = showPendingOnly ? pendingUsers : sortedUsers;
