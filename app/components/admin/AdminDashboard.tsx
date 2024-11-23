@@ -34,7 +34,7 @@ const AdminDashboard: React.FC = () => {
   const [isLabelSubmitting, setIsLabelSubmitting] = useState(false);
   
   // Firebase state
-  const { user, isAdmin, loading: authLoading } = useFirebase();
+  const { user: adminUser, isAdmin, loading: authLoading } = useFirebase();
 
   // Computed values
   const totalUsers = users.length;
@@ -235,7 +235,7 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
-  if (!user || !isAdmin) {
+  if (!adminUser || !isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

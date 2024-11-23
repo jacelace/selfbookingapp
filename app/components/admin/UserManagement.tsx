@@ -20,17 +20,20 @@ import CreateUserForm from './CreateUserForm';
 interface UserManagementProps {
   users: EnhancedUser[];
   labels?: LabelType[];
+  isSubmitting: boolean;
+  setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
   onRefresh?: () => void;
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({
   users,
   labels = [],
+  isSubmitting,
+  setIsSubmitting,
   onRefresh
 }) => {
   const [error, setError] = useState<string | null>(null);
   const [showPendingOnly, setShowPendingOnly] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const pendingUsers = users.filter(user => user.status === 'pending');
   const approvedUsers = users.filter(user => user.status === 'approved');
