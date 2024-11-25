@@ -10,10 +10,9 @@ import ColorLabel from './ColorLabel';
 import { onAuthStateChanged } from 'firebase/auth';
 import UserBookingForm from './UserBookingForm';
 import { Button } from './ui/button';
-import { Calendar as CalendarIcon, Clock, X, Check, AlertCircle } from 'lucide-react';
+import { Clock, X, Check, AlertCircle } from 'lucide-react';
 import { createGoogleCalendarUrl } from '../lib/calendar-utils';
 import { cn } from '../lib/utils';
-import { Badge } from './ui/badge';
 import { format } from 'date-fns';
 
 interface Booking {
@@ -216,149 +215,115 @@ export default function UserBookings({ showPast = false }: UserBookingsProps) {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return (
-          <div className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700">
-            <Check className="w-3 h-3 mr-1" />
-            Confirmed
-          </div>
-        );
-      case 'cancelled':
-        return (
-          <div className="inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700">
-            <X className="w-3 h-3 mr-1" />
-            Cancelled
-          </div>
-        );
-      case 'rescheduled':
-        return (
-          <div className="inline-flex items-center rounded-full bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700">
-            <Clock className="w-3 h-3 mr-1" />
-            Rescheduled
-          </div>
-        );
-      default:
-        return (
-          <div className="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700">
-            <AlertCircle className="w-3 h-3 mr-1" />
-            {status}
-          </div>
-        );
-    }
-  };
-
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-
-  if (error) {
-    return <p className="text-red-500">{error}</p>;
-  }
-
-  const filteredBookings = bookings
-    .filter(booking => {
-      const bookingDate = booking.date.toDate();
-      const now = new Date();
-      return showPast ? bookingDate < now : bookingDate >= now;
-    })
-    .sort((a, b) => {
-      const dateA = a.date.toDate();
-      const dateB = b.date.toDate();
-      return showPast ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
-    });
-
-  if (filteredBookings.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <CalendarIcon className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-2 text-sm font-semibold text-gray-900">No bookings</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          {showPast ? "You don't have any past sessions." : "Get started by creating a new booking."}
-        </p>
-        {!showPast && (
-          <div className="mt-6">
-            <UserBookingForm
-              userId={currentUser?.uid}
-              remainingSessions={userInfo?.remainingSessions || 0}
-            />
-          </div>
-        )}
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      {!showPast && (
-        <UserBookingForm
-          userId={currentUser?.uid}
-          remainingSessions={userInfo?.remainingSessions || 0}
-        />
+    <div className="space-y-6">
+      {loading ? (
+        <LoadingSpinner />
+      ) : error ? (
+        <div className="text-center text-red-500">{error}</div>
+      ) : (
+        <>
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold tracking-tight">My Bookings</h2>
+            {userInfo && (
+              <div className="text-sm text-gray-500">
+                Remaining sessions: {userInfo.remainingSessions || 0}
+              </div>
+            )}
+          </div>
+
+          {bookings.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No bookings found.</p>
+            </div>
+          ) : (
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bookings.map((booking) => {
+                    const bookingDate = booking.date.toDate();
+                    const isUpcoming = bookingDate > new Date();
+                    const isWithinTimeLimit = isUpcoming && 
+                      (bookingDate.getTime() - new Date().getTime()) / (1000 * 60 * 60) > bookingSettings.cancelTimeLimit;
+
+                    return (
+                      <TableRow key={booking.id}>
+                        <TableCell>
+                          {format(bookingDate, 'MMM d, yyyy')}
+                        </TableCell>
+                        <TableCell>{booking.time}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {booking.status === 'confirmed' ? (
+                              <Check className="w-4 h-4 text-green-500" />
+                            ) : booking.status === 'cancelled' ? (
+                              <X className="w-4 h-4 text-red-500" />
+                            ) : (
+                              <AlertCircle className="w-4 h-4 text-yellow-500" />
+                            )}
+                            <span className={cn(
+                              "capitalize",
+                              booking.status === 'confirmed' && "text-green-600",
+                              booking.status === 'cancelled' && "text-red-600",
+                              booking.status === 'rescheduled' && "text-yellow-600"
+                            )}>
+                              {booking.status}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {booking.status === 'confirmed' && isUpcoming && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  asChild
+                                >
+                                  <a
+                                    href={createGoogleCalendarUrl({
+                                      title: 'Your Booking',
+                                      description: `Booking with ${booking.userName}`,
+                                      startTime: `${format(bookingDate, 'yyyy-MM-dd')}T${booking.time}`,
+                                      duration: 60
+                                    })}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <Clock className="w-4 h-4 mr-1" />
+                                    Add to Calendar
+                                  </a>
+                                </Button>
+                                {isWithinTimeLimit && (
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleCancelBooking(booking.id)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </>
       )}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-[100px]">Date</TableHead>
-              <TableHead>Time</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredBookings.map((booking) => (
-              <TableRow key={booking.id}>
-                <TableCell className="font-medium">
-                  {format(booking.date.toDate(), 'MMM d, yyyy')}
-                </TableCell>
-                <TableCell>{booking.time}</TableCell>
-                <TableCell>{getStatusBadge(booking.status)}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end space-x-2">
-                    {booking.status === 'confirmed' && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(createGoogleCalendarUrl(booking), '_blank')}
-                          className="bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-700 border-blue-200"
-                        >
-                          <CalendarIcon className="h-4 w-4 mr-1" />
-                          Add to Calendar
-                        </Button>
-                        {!showPast && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleRescheduleBooking(booking.id)}
-                              className="bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-700 border-purple-200"
-                            >
-                              <Clock className="h-4 w-4 mr-1" />
-                              Reschedule
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleCancelBooking(booking.id)}
-                              className="bg-gradient-to-r from-rose-50 to-rose-100 hover:from-rose-100 hover:to-rose-200 text-rose-700 border-rose-200"
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Cancel
-                            </Button>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
     </div>
   );
 }

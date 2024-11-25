@@ -214,6 +214,24 @@ function DayBookingsDialog({ date, bookings, users, open, onOpenChange, onAddBoo
   );
 }
 
+function DayWithBookings({ date, bookings }: { date: Date; bookings: EnhancedBooking[] }) {
+  const hasBookings = bookings.some(booking => {
+    const bookingDate = safeGetDate(booking.date);
+    return isSameDay(bookingDate, date);
+  });
+
+  return (
+    <div className="relative">
+      <div>{date.getDate()}</div>
+      {hasBookings && (
+        <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2">
+          <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings, users = [], onRefresh }) => {
   const [date, setDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -310,6 +328,9 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings, users = [],
         onSelect={handleDateSelect}
         month={date}
         className="rounded-md border"
+        components={{
+          Day: ({ date }) => <DayWithBookings date={date} bookings={bookings} />
+        }}
         modifiers={{
           booked: (date) => {
             return bookings.some(booking => {
@@ -320,8 +341,7 @@ const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings, users = [],
         }}
         modifiersStyles={{
           booked: {
-            backgroundColor: 'rgba(var(--primary), 0.1)',
-            fontWeight: 'bold'
+            backgroundColor: 'rgba(var(--primary), 0.1)'
           }
         }}
       />
