@@ -9,7 +9,7 @@ import { Input } from './ui/input';
 import { Switch } from './ui/switch';
 import { toast } from './ui/use-toast';
 import { Search, AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { LoadingSpinner } from './ui/loading-spinner';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
