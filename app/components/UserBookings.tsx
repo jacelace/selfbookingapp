@@ -290,10 +290,9 @@ export default function UserBookings({ showPast = false }: UserBookingsProps) {
                                 >
                                   <a
                                     href={createGoogleCalendarUrl({
-                                      title: 'Your Booking',
-                                      description: `Booking with ${booking.userName}`,
-                                      startTime: `${format(bookingDate, 'yyyy-MM-dd')}T${booking.time}`,
-                                      duration: 60
+                                      date: booking.date,
+                                      time: booking.time,
+                                      userLabel: booking.userLabel
                                     })}
                                     target="_blank"
                                     rel="noopener noreferrer"
