@@ -2,18 +2,16 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc, enableIndexedDbPersistence, getFirestore } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase/clientApp';
-import { Card } from './components/ui/card';
 import LoadingSpinner from './components/LoadingSpinner';
-import { TEST_CREDENTIALS } from './lib/constants';
 
 interface FirebaseContextType {
   user: User | null;
   isAdmin: boolean;
+  isApproved: boolean;
   loading: boolean;
   error: string | null;
-  signInWithTest: () => Promise<void>;
   signInWithCredentials: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -21,9 +19,9 @@ interface FirebaseContextType {
 const defaultContext: FirebaseContextType = {
   user: null,
   isAdmin: false,
+  isApproved: false,
   loading: true,
   error: null,
-  signInWithTest: async () => {},
   signInWithCredentials: async () => {},
   logout: async () => {},
 };
@@ -35,9 +33,10 @@ export const useFirebase = () => {
 };
 
 export function FirebaseProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<Omit<FirebaseContextType, 'signInWithTest' | 'signInWithCredentials' | 'logout'>>({
+  const [state, setState] = useState<Omit<FirebaseContextType, 'signInWithCredentials' | 'logout'>>({
     user: null,
     isAdmin: false,
+    isApproved: false,
     loading: true,
     error: null,
   });
@@ -48,29 +47,71 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Disable persistence by default
-    const db = getFirestore();
-    enableIndexedDbPersistence(db).catch((err) => {
-      console.error('Error enabling persistence:', err);
-    });
-
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('Auth state changed:', user ? user.email : 'No user');
+      
       if (user) {
         try {
-          // Always fetch fresh user data
+          // Get user data from Firestore
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           const userData = userDoc.data();
+          console.log('User data:', userData);
+
+          if (!userData) {
+            console.log('Creating initial user data in Firestore');
+            // Create initial user data if it doesn't exist
+            const initialUserData = {
+              email: user.email,
+              name: user.email?.split('@')[0] || '',
+              role: 'user',
+              isAdmin: false,
+              status: 'pending',
+              isApproved: false,
+              sessions: 0,
+              remainingBookings: 0,
+              totalBookings: 0,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+
+            try {
+              await setDoc(doc(db, 'users', user.uid), initialUserData);
+              console.log('Initial user data created successfully');
+              
+              setState({
+                user,
+                isAdmin: initialUserData.role === 'admin',
+                isApproved: initialUserData.isApproved,
+                loading: false,
+                error: null,
+              });
+            } catch (error) {
+              console.error('Error creating initial user data:', error);
+              setState({
+                user: null,
+                isAdmin: false,
+                isApproved: false,
+                loading: false,
+                error: 'Error creating user data',
+              });
+            }
+            return;
+          }
+
+          // Update state with existing user data
           setState({
             user,
-            isAdmin: userData?.role === 'admin',
+            isAdmin: userData.role === 'admin',
+            isApproved: userData.isApproved === true,
             loading: false,
             error: null,
           });
         } catch (error) {
           console.error('Error fetching user data:', error);
           setState({
-            user,
+            user: null,
             isAdmin: false,
+            isApproved: false,
             loading: false,
             error: 'Error fetching user data',
           });
@@ -79,6 +120,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
         setState({
           user: null,
           isAdmin: false,
+          isApproved: false,
           loading: false,
           error: null,
         });
@@ -88,41 +130,16 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const signInWithTest = async () => {
-    try {
-      setState(prev => ({ ...prev, loading: true, error: null }));
-      await signInWithEmailAndPassword(auth, TEST_CREDENTIALS.email, TEST_CREDENTIALS.password);
-    } catch (error) {
-      console.error('Test sign-in error:', error);
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: 'Error signing in with test credentials',
-      }));
-      throw error;
-    }
-  };
-
   const signInWithCredentials = async (email: string, password: string) => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      // Check user's approval status
-      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-      const userData = userDoc.data();
-      
-      if (!userData || userData.status === 'pending' || userData.isApproved === false) {
-        // Sign out if not approved
-        await signOut(auth);
-        throw new Error('Account pending approval');
-      }
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
       console.error('Sign-in error:', error);
       setState(prev => ({
         ...prev,
         loading: false,
-        error: error instanceof Error ? error.message : 'Error signing in',
+        error: 'Invalid email or password',
       }));
       throw error;
     }
@@ -146,9 +163,7 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
   if (state.loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Card className="p-4">
-          <LoadingSpinner />
-        </Card>
+        <LoadingSpinner />
       </div>
     );
   }
@@ -157,7 +172,6 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     <FirebaseContext.Provider
       value={{
         ...state,
-        signInWithTest,
         signInWithCredentials,
         logout,
       }}

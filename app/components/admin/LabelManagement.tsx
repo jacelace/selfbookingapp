@@ -7,13 +7,13 @@ import { Checkbox } from '../ui/checkbox';
 import { Input } from '../ui/input';
 import { X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { collection, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-import { db, auth } from '../../firebase/clientApp';
+import { collection, addDoc, deleteDoc, doc, updateDoc, getDocs, Timestamp } from 'firebase/firestore';
+import { db } from '../../firebase/firebaseInit';
+import { auth } from '../../firebase/clientApp';
 import type { Label as LabelType } from '../../types';
 import ColorLabel from '../ColorLabel';
 import LoadingSpinner from '../LoadingSpinner';
-import { TEST_CREDENTIALS } from '../../lib/constants';
-import { toast } from '../ui/use-toast';
+import { useToast } from '../ui/use-toast';
 
 interface LabelManagementProps {
   labels: LabelType[];
@@ -48,15 +48,17 @@ const LabelManagement: React.FC<LabelManagementProps> = ({
     try {
       // Check if we're logged in as admin
       const currentUser = auth.currentUser;
-      if (!currentUser || currentUser.email !== TEST_CREDENTIALS.email) {
+      if (!currentUser) {
         throw new Error('Unauthorized: Only admins can add labels');
       }
 
       // Create label document
       const labelData = {
-        ...newLabel,
-        createdAt: new Date().toISOString(),
-        createdBy: currentUser.uid
+        name: newLabel.name,
+        color: newLabel.color,
+        isDefault: newLabel.isDefault,
+        createdAt: Timestamp.now(),
+        createdBy: currentUser.uid,
       };
 
       // Add the document
@@ -97,7 +99,7 @@ const LabelManagement: React.FC<LabelManagementProps> = ({
     try {
       // Check if we're logged in as admin
       const currentUser = auth.currentUser;
-      if (!currentUser || currentUser.email !== TEST_CREDENTIALS.email) {
+      if (!currentUser) {
         throw new Error('Unauthorized: Only admins can delete labels');
       }
 

@@ -22,8 +22,10 @@ service cloud.firestore {
       allow read: if isSignedIn() && 
                  (request.auth.uid == userId || isAdmin());
       
-      // Only admins can create new users
-      allow create: if isSignedIn() && isAdmin();
+      // Allow creation of the first admin user or if an admin is creating
+      allow create: if isSignedIn() && 
+                   ((request.auth.uid == userId && request.resource.data.email == 'admin@example.com') || 
+                    isAdmin());
       
       // Users can update their own basic info
       // Admins can update any user

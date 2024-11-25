@@ -1,19 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/clientApp';
 import { toast } from '../components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '../components/LoadingSpinner';
 import UserBookings from '../components/UserBookings';
+import BookingFlow from '../components/BookingFlow';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Calendar, Clock, User } from 'lucide-react';
+import { Calendar, Clock } from 'lucide-react';
 
 interface UserData {
   name: string;
   email: string;
+  phone: string;
   remainingBookings: number;
   status?: string;
   isApproved?: boolean;
@@ -53,33 +55,31 @@ export default function BookingPage() {
           return;
         }
 
-        // Check if user is approved - either by isApproved flag or role being 'user'
-        const isUserApproved = userDataFromDb.isApproved === true || userDataFromDb.role === 'user';
-        console.log('Is user approved:', isUserApproved);
-
-        if (!isUserApproved) {
+        if (!userDataFromDb.isApproved) {
           console.log('User not approved');
           toast({
-            title: "Not Approved",
-            description: "Your account is pending approval.",
+            title: "Access Denied",
+            description: "Your account is pending approval",
             variant: "destructive",
           });
           router.push('/');
           return;
         }
 
-        // If there's a labelId, fetch the label details
-        if (userDataFromDb.labelId) {
-          const labelDoc = await getDoc(doc(db, 'labels', userDataFromDb.labelId));
-          if (labelDoc.exists()) {
-            const labelData = labelDoc.data();
-            userDataFromDb.labelName = labelData.name;
-            userDataFromDb.labelColor = labelData.color;
-          }
-        }
+        const userData: UserData = {
+          name: userDoc.data()?.name || '',
+          email: userDoc.data()?.email || '',
+          remainingBookings: userDoc.data()?.remainingBookings || 0,
+          phone: userDoc.data()?.phone || '',
+          status: userDoc.data()?.status,
+          isApproved: userDoc.data()?.isApproved,
+          role: userDoc.data()?.role,
+          labelId: userDoc.data()?.labelId,
+          labelName: userDoc.data()?.labelName,
+          labelColor: userDoc.data()?.labelColor,
+        };
 
-        setUserData(userDataFromDb);
-        setLoading(false);
+        setUserData(userData);
       } catch (error) {
         console.error('Error checking approval status:', error);
         toast({
@@ -87,109 +87,100 @@ export default function BookingPage() {
           description: "Failed to check approval status",
           variant: "destructive",
         });
-        router.push('/');
+      } finally {
+        setLoading(false);
       }
     };
 
     checkApprovalStatus();
   }, [router]);
 
+  const handleUserInfoUpdate = async (info: Partial<UserData>) => {
+    if (!auth.currentUser) return;
+
+    try {
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      await updateDoc(userRef, info);
+      setUserData(prev => prev ? { ...prev, ...info } : null);
+      toast({
+        title: "Success",
+        description: "User information updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating user info:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user information",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBookingComplete = () => {
+    if (!userData) return;
+    
+    setUserData(prev => prev ? {
+      ...prev,
+      remainingBookings: Math.max(0, prev.remainingBookings - 1)
+    } : null);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
-  if (!userData) {
-    return (
-      <div className="container mx-auto p-6">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-red-500">
-              Unable to load user data. Please try again.
-            </p>
-          </CardContent>
-        </Card>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6 mt-16">
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Booking Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Manage your therapy sessions</p>
-        </div>
+    <div className="container mx-auto p-6">
+      <div className="max-w-4xl mx-auto">
+        <Tabs defaultValue="book" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="book" className="space-x-2">
+              <Calendar className="h-4 w-4" />
+              <span>Book Session</span>
+            </TabsTrigger>
+            <TabsTrigger value="bookings" className="space-x-2">
+              <Clock className="h-4 w-4" />
+              <span>My Bookings</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="book" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Book a New Session</CardTitle>
+                <CardDescription>
+                  You have {userData?.remainingBookings || 0} sessions remaining
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <BookingFlow
+                  userData={userData}
+                  onUserInfoUpdate={handleUserInfoUpdate}
+                  onBookingComplete={handleBookingComplete}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="bookings">
+            <Card>
+              <CardHeader>
+                <CardTitle>My Bookings</CardTitle>
+                <CardDescription>
+                  View and manage your upcoming sessions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <UserBookings />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-
-      {/* User Info Section */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">User Profile</CardTitle>
-            <User className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-700">{userData.name}</div>
-            <p className="text-xs text-blue-600/80">{userData.email}</p>
-            {userData.labelName && (
-              <div className="mt-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                   style={{ backgroundColor: userData.labelColor + '20', color: userData.labelColor }}>
-                {userData.labelName}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-pink-50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Remaining Sessions</CardTitle>
-            <Calendar className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-700">{userData.remainingBookings}</div>
-            <p className="text-xs text-purple-600/80">Available bookings</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-pink-50 to-rose-50">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Next Session</CardTitle>
-            <Clock className="h-4 w-4 text-pink-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-pink-700">-</div>
-            <p className="text-xs text-pink-600/80">Upcoming appointment</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Bookings Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Bookings</CardTitle>
-          <CardDescription>
-            Manage your therapy sessions and appointments
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="upcoming" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-              <TabsTrigger value="past">Past Sessions</TabsTrigger>
-            </TabsList>
-            <TabsContent value="upcoming" className="space-y-4">
-              <UserBookings />
-            </TabsContent>
-            <TabsContent value="past" className="space-y-4">
-              <UserBookings showPast />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
     </div>
   );
 }

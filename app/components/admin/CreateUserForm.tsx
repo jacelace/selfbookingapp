@@ -8,10 +8,10 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Switch } from '../ui/switch';
 import { toast } from '../ui/use-toast';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db } from '../../firebase/clientApp';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { db } from '../../firebase/firebaseInit';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../firebase/clientApp';
+import { auth } from '../../firebase/firebaseInit';
 import { useFirebase } from '../../FirebaseProvider';
 import type { Label as LabelType } from '../../types';
 
@@ -42,55 +42,154 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ labels, isSubmitting, s
       return;
     }
 
-    if (!email || !password || !selectedLabel || !sessions) {
+    // Validate all required fields
+    const errors = [];
+    if (!email) errors.push('Email is required');
+    if (!password) errors.push('Password is required');
+    if (!selectedLabel) errors.push('Label is required');
+    if (!sessions) errors.push('Number of sessions is required');
+    if (password && password.length < 6) errors.push('Password must be at least 6 characters');
+    if (sessions && parseInt(sessions) < 1) errors.push('Number of sessions must be at least 1');
+
+    if (errors.length > 0) {
       toast({
-        title: 'Error',
-        description: 'Please fill in all fields',
+        title: 'Validation Error',
+        description: errors.join('\n'),
         variant: 'destructive',
       });
       return;
     }
 
+    setIsSubmitting(true);
+    let newUser;
+
     try {
-      setIsSubmitting(true);
+      console.log('Creating user with email:', email);
+
+      // First check if user exists in Firestore
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        toast({
+          title: 'Error',
+          description: 'A user with this email already exists',
+          variant: 'destructive',
+        });
+        return;
+      }
 
       // Create the user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const newUser = userCredential.user;
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        newUser = userCredential.user;
+        console.log('User created in Firebase Auth:', newUser.uid);
+      } catch (error: any) {
+        if (error.code === 'auth/email-already-in-use') {
+          toast({
+            title: 'Error',
+            description: 'This email is already registered. Please use a different email.',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Failed to create user account. Please try again.',
+            variant: 'destructive',
+          });
+        }
+        throw error;
+      }
+
+      // Get the selected label details
+      const labelDoc = await getDoc(doc(db, 'labels', selectedLabel));
+      const labelData = labelDoc.data();
+      console.log('Label data:', labelData);
+      
+      if (!labelData) {
+        throw new Error('Selected label not found');
+      }
 
       // Create the user document in Firestore
-      await setDoc(doc(db, 'users', newUser.uid), {
+      const userData = {
+        id: newUser.uid,
         email: email,
-        label: selectedLabel,
+        name: email.split('@')[0],
+        labelId: selectedLabel,
+        userLabel: labelData.name,
+        labelColor: labelData.color,
         sessions: parseInt(sessions),
-        remainingSessions: parseInt(sessions),
-        status: isApproved ? 'active' : 'pending',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        remainingBookings: parseInt(sessions),
+        totalBookings: 0,
+        totalSessions: parseInt(sessions),
+        status: isApproved ? 'approved' : 'pending',
+        isApproved: isApproved,
+        role: 'user',
+        isAdmin: false,
+        createdAt: Timestamp.fromDate(new Date()),
+        updatedAt: Timestamp.fromDate(new Date()),
         createdBy: adminUser.uid,
-      });
+      };
 
-      toast({
-        title: 'Success',
-        description: `User ${email} created successfully${isApproved ? ' and approved' : ' (pending approval)'}`,
-      });
+      console.log('Creating user document in Firestore:', userData);
+      const userRef = doc(db, 'users', newUser.uid);
+      
+      try {
+        await setDoc(userRef, userData);
+        
+        // Verify the document was created
+        const verifyDoc = await getDoc(userRef);
+        if (!verifyDoc.exists()) {
+          throw new Error('Failed to create user document in Firestore');
+        }
+        console.log('User document created and verified successfully');
 
-      // Reset form
-      setEmail('');
-      setPassword('');
-      setSelectedLabel('');
-      setSessions('');
-      setIsApproved(false);
+        toast({
+          title: 'Success',
+          description: `User ${email} created successfully${isApproved ? ' and approved' : ' (pending approval)'}`,
+        });
 
-      // Call onSuccess callback if provided
-      if (onSuccess) {
-        onSuccess();
+        // Reset form
+        setEmail('');
+        setPassword('');
+        setSelectedLabel('');
+        setSessions('');
+        setIsApproved(false);
+
+        // Call onSuccess callback if provided
+        console.log('Calling onSuccess to refresh user list');
+        if (onSuccess) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for Firestore to settle
+          onSuccess();
+        }
+      } catch (error) {
+        console.error('Error creating user document:', error);
+        // Try to clean up the Auth user if Firestore fails
+        try {
+          await newUser.delete();
+        } catch (deleteError) {
+          console.error('Error deleting auth user after Firestore failure:', deleteError);
+        }
+        throw new Error('Failed to create user document');
       }
     } catch (error: any) {
       console.error('Error creating user:', error);
+      let errorMessage = 'Failed to create user';
+      
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create user',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import Link from "next/link";
-import { CheckCircle2, Calendar, Clock, ArrowRight, Home } from "lucide-react";
+import { CheckCircle2, Calendar, Clock, Home } from "lucide-react";
 import { auth, db } from "../../firebase/clientApp";
 import { collection, query, where, getDocs, orderBy, limit, getDoc, doc, Timestamp } from 'firebase/firestore';
 import AddToGoogleCalendar from "../../components/AddToGoogleCalendar";
 import LoadingSpinner from "../../components/LoadingSpinner";
-import { EnhancedUser, EnhancedBooking, TimeString } from "../../types";
+import { TimeString } from "../../types";
 
 interface Booking {
   date: { toDate: () => Date };

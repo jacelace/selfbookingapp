@@ -1,22 +1,25 @@
 'use client';
 
-import * as React from 'react';
 import { useState, useEffect } from 'react';
+import { db } from '../../firebase/clientApp';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { format, isSameDay } from 'date-fns';
 import { Calendar } from '../ui/calendar';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, isSameDay, startOfMonth, endOfMonth } from 'date-fns';
-import type { EnhancedBooking } from '../../types';
+import { Search } from 'lucide-react';
+import type { EnhancedBooking, EnhancedUser } from '../../types';
 import ColorLabel from '../ColorLabel';
 import { cn } from '../../lib/utils';
-import { Timestamp } from 'firebase/firestore';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../firebase/clientApp';
+import { Timestamp, addDoc } from 'firebase/firestore';
+import { BOOKING_TIMES } from '../../lib/constants';
+import { toast } from '../ui/use-toast';
+import { Input } from "../../components/ui/input"
 
 interface BookingCalendarProps {
   bookings: EnhancedBooking[];
+  users?: EnhancedUser[];
   onRefresh?: () => void;
 }
 
@@ -30,216 +33,309 @@ interface TimeOff {
 interface DayBookingsDialogProps {
   date: Date;
   bookings: EnhancedBooking[];
+  users: EnhancedUser[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAddBooking: (time: string, userId?: string) => void;
 }
-
-const timeSlots = [
-  '10:00 AM', '11:00 AM', '12:00 PM',
-  '1:00 PM', '2:00 PM', '3:00 PM'
-].map(time => time);
 
 // Helper function to safely get Date from Timestamp or Date
 const safeGetDate = (date: Date | Timestamp): Date => {
   return date instanceof Timestamp ? date.toDate() : date;
 };
 
-function DayBookingsDialog({ date, bookings, open, onOpenChange }: DayBookingsDialogProps) {
+function DayBookingsDialog({ date, bookings, users, open, onOpenChange, onAddBooking }: DayBookingsDialogProps) {
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Reset states when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setSelectedTime(null);
+      setSelectedUserId(null);
+      setSearchQuery('');
+    }
+  }, [open]);
+
   // Filter bookings for the selected date
   const dayBookings = bookings.filter(booking => {
     const bookingDate = safeGetDate(booking.date);
     return bookingDate && isSameDay(bookingDate, date);
   }).sort((a, b) => {
-    const timeA = timeSlots.indexOf(a.time);
-    const timeB = timeSlots.indexOf(b.time);
+    const timeA = BOOKING_TIMES.indexOf(a.time);
+    const timeB = BOOKING_TIMES.indexOf(b.time);
     return timeA - timeB;
   });
 
+  // Filter users based on search query
+  const filteredUsers = users.filter(user => 
+    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleAddBooking = () => {
+    if (selectedTime) {
+      onAddBooking(selectedTime, selectedUserId || undefined);
+      setSelectedTime(null);
+      setSelectedUserId(null);
+    }
+  };
+
+  const isTimeSlotBooked = (timeSlot: string) => {
+    return dayBookings.some(booking => booking.time === timeSlot);
+  };
+
+  const selectedUser = users.find(user => user.id === selectedUserId);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>
             Bookings for {format(date, 'MMMM d, yyyy')}
           </DialogTitle>
         </DialogHeader>
-        <div className="max-h-[60vh] overflow-y-auto pr-4 -mr-4">
-          <div className="space-y-4 p-4">
-            {timeSlots.map((timeSlot) => {
-              const booking = dayBookings.find(b => b.time === timeSlot);
-              return (
-                <div
-                  key={timeSlot}
-                  className={cn(
-                    "p-3 rounded-lg border",
-                    booking ? "bg-secondary/50" : "bg-background"
-                  )}
-                >
-                  <div className="font-medium">{timeSlot}</div>
-                  {booking ? (
-                    <div className="mt-1 space-y-1">
-                      <div className="text-sm">{booking.userName}</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <h3 className="font-semibold">Available Time Slots</h3>
+            <div className="max-h-[60vh] overflow-y-auto">
+              <div className="space-y-4">
+                {BOOKING_TIMES.map((timeSlot) => {
+                  const booking = dayBookings.find(b => b.time === timeSlot);
+                  const isBooked = isTimeSlotBooked(timeSlot);
+                  const isSelected = selectedTime === timeSlot;
+
+                  return (
+                    <button
+                      key={timeSlot}
+                      onClick={() => !isBooked && setSelectedTime(isSelected ? null : timeSlot)}
+                      disabled={isBooked}
+                      className={cn(
+                        "w-full text-left p-3 rounded-lg border transition-colors",
+                        isBooked ? "bg-secondary/50" : "hover:bg-secondary/20",
+                        isSelected && "ring-2 ring-primary",
+                        !isBooked && "cursor-pointer"
+                      )}
+                    >
+                      <div className="font-medium">{timeSlot}</div>
+                      {booking ? (
+                        <div className="mt-1 space-y-1">
+                          <div className="text-sm">{booking.userName}</div>
+                          <ColorLabel 
+                            name={booking.userLabel || 'No Label'}
+                            color={booking.userLabelColor || '#808080'}
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground">Available</div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="font-semibold">Select User</h3>
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search users..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            {selectedUser && (
+              <div className="p-4 rounded-lg border bg-secondary/20">
+                <div className="font-medium">Selected User:</div>
+                <div className="mt-2">
+                  <div>{selectedUser.name}</div>
+                  <div className="text-sm text-muted-foreground">{selectedUser.email}</div>
+                  {selectedUser.userLabel && (
+                    <div className="mt-1">
                       <ColorLabel 
-                        name={booking.userLabel || 'No Label'}
-                        color={booking.userLabelColor || '#808080'}
-                      >
-                        {booking.userLabel || 'No Label'}
-                      </ColorLabel>
-                      <div className="text-xs text-muted-foreground">
-                        {booking.recurring === 'weekly' ? 'Recurring' : 'One-time'}
-                      </div>
+                        name={selectedUser.userLabel}
+                        color={selectedUser.labelColor || ''}
+                      />
                     </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">Available</div>
                   )}
+                  <div className="mt-2 text-sm">
+                    <div>Sessions: {selectedUser.sessions}</div>
+                    <div>Remaining: {selectedUser.remainingBookings}</div>
+                  </div>
                 </div>
-              );
-            })}
+              </div>
+            )}
+            <div className="max-h-[calc(60vh-8rem)] overflow-y-auto">
+              <div className="space-y-2">
+                {filteredUsers.map((user) => (
+                  <button
+                    key={user.id}
+                    onClick={() => setSelectedUserId(user.id)}
+                    className={cn(
+                      "w-full text-left p-3 rounded-lg border transition-colors hover:bg-secondary/20",
+                      selectedUserId === user.id && "ring-2 ring-primary",
+                      user.remainingBookings === 0 && "opacity-50"
+                    )}
+                    disabled={user.remainingBookings === 0}
+                  >
+                    <div className="font-medium">{user.name}</div>
+                    <div className="text-sm text-muted-foreground">{user.email}</div>
+                    {user.userLabel && (
+                      <div className="mt-1">
+                        <ColorLabel 
+                          name={user.userLabel}
+                          color={user.labelColor || ''}
+                        />
+                      </div>
+                    )}
+                    <div className="mt-1 text-sm">
+                      Remaining: {user.remainingBookings} / {user.sessions}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
+        <DialogFooter>
+          <Button
+            onClick={handleAddBooking}
+            disabled={!selectedTime || !selectedUserId || (selectedUser?.remainingBookings === 0)}
+          >
+            Add Booking
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings, onRefresh }) => {
+const BookingCalendar: React.FC<BookingCalendarProps> = ({ bookings, users = [], onRefresh }) => {
   const [date, setDate] = useState<Date>(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [timeOffPeriods, setTimeOffPeriods] = useState<TimeOff[]>([]);
-  const [selectedDateBookings, setSelectedDateBookings] = useState<EnhancedBooking[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
 
-  // Fetch time-off periods
-  useEffect(() => {
-    const fetchTimeOffPeriods = async () => {
-      try {
-        const timeOffSnapshot = await getDocs(collection(db, 'timeOff'));
-        const periods = timeOffSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as TimeOff[];
-        setTimeOffPeriods(periods);
-      } catch (error) {
-        console.error('Error fetching time-off periods:', error);
-      }
-    };
+  // Filter users based on search query and selected label
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = searchQuery === '' || 
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesLabel = selectedLabel === null || user.userLabel === selectedLabel;
+    
+    return matchesSearch && matchesLabel;
+  });
 
-    fetchTimeOffPeriods();
-  }, []);
+  // Get unique labels from users
+  const uniqueLabels = Array.from(new Set(users.map(user => user.userLabel).filter(Boolean)));
 
-  // Check if a date is within any time-off period
-  const isDateInTimeOff = (date: Date) => {
-    return timeOffPeriods.some(period => {
-      const start = period.startDate.toDate();
-      const end = period.endDate.toDate();
-      return date >= start && date <= end;
-    });
-  };
+  const handleAddBooking = async (time: string, userId?: string) => {
+    if (!selectedDate || !userId) return;
 
-  // Get time-off reason for a date if it exists
-  const getTimeOffReason = (date: Date) => {
-    const period = timeOffPeriods.find(period => {
-      const start = period.startDate.toDate();
-      const end = period.endDate.toDate();
-      return date >= start && date <= end;
-    });
-    return period?.reason;
-  };
+    try {
+      const user = users.find(u => u.id === userId);
+      if (!user) throw new Error('User not found');
 
-  useEffect(() => {
-    if (selectedDate) {
-      const dayBookings = bookings.filter(booking => {
-        const bookingDate = safeGetDate(booking.date);
-        return bookingDate && isSameDay(bookingDate, selectedDate);
+      const bookingData = {
+        date: Timestamp.fromDate(selectedDate),
+        time,
+        userId,
+        userName: user.name,
+        userLabel: user.userLabel,
+        userLabelColor: user.labelColor,
+        status: 'confirmed',
+        createdAt: Timestamp.now()
+      };
+
+      await addDoc(collection(db, 'bookings'), bookingData);
+      toast({
+        title: 'Success',
+        description: 'Booking added successfully',
       });
-      setSelectedDateBookings(dayBookings);
+      onRefresh?.();
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error('Error adding booking:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add booking',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
       setIsDialogOpen(true);
     }
-  }, [selectedDate, bookings]);
-
-  const handleSelect = (date: Date | undefined) => {
-    setSelectedDate(date);
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>Booking Calendar</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-center">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={handleSelect}
-            month={date}
-            onMonthChange={setDate}
-            className="rounded-md border w-full"
-            classNames={{
-              months: "space-y-4",
-              month: "space-y-4",
-              caption: "flex justify-center pt-1 relative items-center",
-              caption_label: "text-sm font-medium",
-              nav: "space-x-1 flex items-center",
-              nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
-              nav_button_previous: "absolute left-1",
-              nav_button_next: "absolute right-1",
-              table: "w-full border-collapse space-y-1",
-              head_row: "flex",
-              head_cell: "text-muted-foreground rounded-md w-14 font-normal text-[0.8rem]",
-              row: "flex w-full mt-2",
-              cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md",
-              day: "h-14 w-14 p-0 font-normal aria-selected:opacity-100",
-              day_range_end: "day-range-end",
-              day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-              day_today: "bg-accent text-accent-foreground",
-              day_outside: "text-muted-foreground opacity-50",
-              day_disabled: "text-muted-foreground opacity-50",
-              day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-              day_hidden: "invisible",
-            }}
-            components={{
-              DayContent: (props) => {
-                const dayBookings = bookings.filter(booking => {
-                  const bookingDate = safeGetDate(booking.date);
-                  return bookingDate && isSameDay(bookingDate, props.date);
-                });
-
-                const isTimeOff = timeOffPeriods.some(period => {
-                  const startDate = safeGetDate(period.startDate);
-                  const endDate = safeGetDate(period.endDate);
-                  return startDate && endDate && props.date >= startDate && props.date <= endDate;
-                });
-
-                return (
-                  <div className="relative w-full h-full">
-                    <div className={cn(
-                      "w-full h-full flex items-center justify-center",
-                      isTimeOff && "bg-red-100",
-                      dayBookings.length > 0 && "bg-blue-100"
-                    )}>
-                      {props.date.getDate()}
-                      {dayBookings.length > 0 && (
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500" />
-                      )}
-                    </div>
-                  </div>
-                );
-              }
-            }}
-          />
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <Button
+          variant="outline"
+          onClick={() => {
+            const newDate = new Date(date);
+            newDate.setMonth(date.getMonth() - 1);
+            setDate(newDate);
+          }}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="font-semibold">
+          {format(date, 'MMMM yyyy')}
         </div>
-      </CardContent>
-      {selectedDate && (
-        <DayBookingsDialog
-          date={selectedDate}
-          bookings={selectedDateBookings}
-          open={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-        />
-      )}
-    </Card>
+        <Button
+          variant="outline"
+          onClick={() => {
+            const newDate = new Date(date);
+            newDate.setMonth(date.getMonth() + 1);
+            setDate(newDate);
+          }}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+      <Calendar
+        mode="single"
+        selected={selectedDate}
+        onSelect={handleDateSelect}
+        month={date}
+        className="rounded-md border"
+        modifiers={{
+          booked: (date) => {
+            return bookings.some(booking => {
+              const bookingDate = safeGetDate(booking.date);
+              return isSameDay(bookingDate, date);
+            });
+          }
+        }}
+        modifiersStyles={{
+          booked: {
+            backgroundColor: 'rgba(var(--primary), 0.1)',
+            fontWeight: 'bold'
+          }
+        }}
+      />
+
+      <DayBookingsDialog
+        date={selectedDate || new Date()}
+        bookings={bookings}
+        users={filteredUsers}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onAddBooking={handleAddBooking}
+      />
+    </div>
   );
-}
+};
 
 export default BookingCalendar;

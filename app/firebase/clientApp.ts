@@ -1,8 +1,8 @@
 'use client';
 
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
-import { getFirestore, enableIndexedDbPersistence, initializeFirestore, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { getFirestore, initializeFirestore, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -16,15 +16,16 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+
+// Initialize Firebase Authentication
 const auth = getAuth(app);
 
-// Initialize Firestore with persistence disabled
+// Initialize Firestore with settings for better performance
 const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true, // This ensures we always get fresh data
-  cacheSizeBytes: 1048576, // Minimum cache size (1MB)
+  cacheSizeBytes: CACHE_SIZE_UNLIMITED,
 });
 
-// Use session persistence for auth instead of local persistence
-setPersistence(auth, browserSessionPersistence);
+// Use local persistence for better user experience
+setPersistence(auth, browserLocalPersistence);
 
 export { app, auth, db };

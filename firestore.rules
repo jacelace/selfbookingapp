@@ -9,55 +9,70 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() && (
-        request.auth.token.email == 'admin@example.com' ||
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        request.auth.token.email_verified && (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        )
       );
     }
 
     // Users collection
     match /users/{userId} {
       allow read: if isAuthenticated();
-      // Allow users to create their own document with their UID
-      allow create: if isAuthenticated() && 
-        userId == request.auth.uid && 
-        request.resource.data.role == 'user' &&
-        request.resource.data.status == 'pending';
-      // Allow users to update their own document, admin can update any
-      allow update: if isAdmin() || (
-        isAuthenticated() && 
-        userId == request.auth.uid && 
-        !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['role', 'status', 'isAdmin'])
+      // Allow admins to create user documents
+      allow create: if isAuthenticated() && (
+        (request.auth.uid == userId) || // User can create their own document
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && // Admin exists
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true // Is admin
       );
-      allow delete: if isAdmin();
+      // Allow admins to update any user, users can update their own non-sensitive fields
+      allow update: if isAuthenticated() && (
+        (request.auth.uid == userId && // User updating their own document
+         !request.resource.data.diff(resource.data).affectedKeys()
+           .hasAny(['role', 'isAdmin', 'status'])) || // Can't change sensitive fields
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && // Admin exists
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true) // Is admin
+      );
+      allow delete: if isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
     // Labels collection
     match /labels/{labelId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
     // Bookings collection
     match /bookings/{bookingId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAdmin() || 
-        (isAuthenticated() && 
-         request.resource.data.userId == request.auth.uid);
-      allow delete: if isAdmin();
+      allow create, update: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid || // Own booking
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true // Admin
+      );
+      allow delete: if isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
     // Settings collection
     match /settings/{settingId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
     // Time Off collection
     match /timeOff/{timeOffId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
   }
 }

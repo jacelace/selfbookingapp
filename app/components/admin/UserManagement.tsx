@@ -8,7 +8,6 @@ import { updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../firebase/clientApp';
 import type { EnhancedUser, Label as LabelType } from '../../types';
 import LoadingSpinner from '../LoadingSpinner';
-import { TEST_CREDENTIALS } from '../../lib/constants';
 import { toast } from '../ui/use-toast';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
@@ -34,12 +33,30 @@ const UserManagement: React.FC<UserManagementProps> = ({
 }) => {
   const [error, setError] = useState<string | null>(null);
   const [showPendingOnly, setShowPendingOnly] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   
-  const pendingUsers = users.filter(user => user.status === 'pending' || !user.isApproved);
-  const approvedUsers = users.filter(user => user.status === 'approved' && user.isApproved);
-  // Combine pending users first, followed by approved users
-  const sortedUsers = [...pendingUsers, ...approvedUsers];
-  const displayUsers = showPendingOnly ? pendingUsers : sortedUsers;
+  // Filter users based on status and search term
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = !searchTerm || 
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (showPendingOnly) {
+      return (!user.isApproved || user.status === 'pending') && matchesSearch;
+    }
+    return matchesSearch;
+  });
+
+  // Sort users: pending first, then approved
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    if ((!a.isApproved || a.status === 'pending') && (b.isApproved && b.status === 'approved')) return -1;
+    if ((a.isApproved && a.status === 'approved') && (!b.isApproved || b.status === 'pending')) return 1;
+    return 0;
+  });
+
+  console.log('UserManagement - Total users:', users.length);
+  console.log('UserManagement - Filtered users:', filteredUsers.length);
+  console.log('UserManagement - Display users:', sortedUsers.length);
 
   const handleUpdateUserLabel = async (userId: string, labelId: string) => {
     try {
@@ -193,112 +210,125 @@ const UserManagement: React.FC<UserManagementProps> = ({
         labels={labels}
         isSubmitting={isSubmitting}
         setIsSubmitting={setIsSubmitting}
+        onSuccess={onRefresh}
       />
-      <div className="flex items-center justify-between px-1">
+      <div className="flex items-center space-x-4 mb-4">
         <div className="flex items-center space-x-2">
           <Switch
-            id="pending-filter"
+            id="pending-only"
             checked={showPendingOnly}
             onCheckedChange={setShowPendingOnly}
-            className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-purple-500 data-[state=checked]:to-pink-500"
           />
-          <Label htmlFor="pending-filter" className="text-sm">Show pending users only</Label>
+          <Label htmlFor="pending-only">Show pending only</Label>
         </div>
-        <p className="text-sm text-muted-foreground">
-          {showPendingOnly ? `${pendingUsers.length} pending` : `${users.length} total`} users
-        </p>
+        <Input
+          type="text"
+          placeholder="Search users..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-xs"
+        />
       </div>
 
-      <div className="rounded-md border bg-gradient-to-br from-white to-gray-50">
+      <div className="rounded-lg border">
         <Table>
           <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[160px] text-xs py-3">Name</TableHead>
-              <TableHead className="w-[130px] text-xs py-3">Label</TableHead>
-              <TableHead className="w-[90px] text-xs py-3">Sessions</TableHead>
-              <TableHead className="w-[90px] text-xs py-3">Status</TableHead>
-              <TableHead className="text-xs py-3">Actions</TableHead>
+            <TableRow>
+              <TableHead>Email</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Label</TableHead>
+              <TableHead>Sessions</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {displayUsers.map((user) => (
-              <TableRow key={user.id} className="hover:bg-gray-50/50">
-                <TableCell className="text-sm py-2.5">{user.name || user.email}</TableCell>
-                <TableCell className="py-2.5">
-                  <Select
-                    value={user.labelId || ''}
-                    onValueChange={(value) => handleUpdateUserLabel(user.id, value)}
-                    disabled={isSubmitting}
-                  >
-                    <SelectTrigger className="h-8 w-[120px] text-sm">
-                      <SelectValue placeholder="Select label" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {labels.map((label) => (
-                        <SelectItem key={label.id} value={label.id} className="text-sm">
-                          {label.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            {sortedUsers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-4">
+                  {searchTerm 
+                    ? "No users found matching your search"
+                    : showPendingOnly 
+                      ? "No pending users found" 
+                      : "No users found"}
                 </TableCell>
-                <TableCell className="text-sm py-2.5">
-                  <div className="flex items-center space-x-2">
+              </TableRow>
+            ) : (
+              sortedUsers.map((user) => (
+                <TableRow key={user.id} className={cn(
+                  "hover:bg-muted/50 transition-colors",
+                  !user.isApproved && "bg-yellow-50 hover:bg-yellow-100/70"
+                )}>
+                  <TableCell className="font-medium">{user.email}</TableCell>
+                  <TableCell>{user.name}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={user.isApproved}
+                        onCheckedChange={(checked) => handleApprovalChange(user.id, checked)}
+                        disabled={isSubmitting}
+                      />
+                      <span className={cn(
+                        "text-sm",
+                        user.isApproved ? "text-green-600" : "text-yellow-600"
+                      )}>
+                        {user.isApproved ? "Approved" : "Pending"}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Select
+                      value={user.labelId || ''}
+                      onValueChange={(value) => handleUpdateUserLabel(user.id, value)}
+                      disabled={isSubmitting}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue>
+                          {labels.find(l => l.id === user.labelId)?.name || 'Select a label'}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {labels.map((label) => (
+                          <SelectItem key={label.id} value={label.id}>
+                            <div className="flex items-center space-x-2">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: label.color }}
+                              />
+                              <span>{label.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
                     <Input
                       type="number"
-                      value={user.sessions || 0}
-                      onChange={(e) => handleUpdateUserSessions(user.id, parseInt(e.target.value))}
-                      className="h-8 w-16 text-sm"
-                      min="0"
-                    />
-                  </div>
-                </TableCell>
-                <TableCell className="py-2.5">
-                  <span className={cn(
-                    "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium",
-                    user.status === 'approved' && "bg-green-100 text-green-700",
-                    user.status === 'pending' && "bg-yellow-100 text-yellow-700",
-                    user.status === 'rejected' && "bg-red-100 text-red-700"
-                  )}>
-                    {user.status}
-                  </span>
-                </TableCell>
-                <TableCell className="py-2.5">
-                  <div className="flex items-center space-x-2">
-                    {user.status === 'pending' && (
-                      <>
-                        <Button
-                          onClick={() => handleApprovalChange(user.id, true)}
-                          disabled={isSubmitting}
-                          size="sm"
-                          className="h-7 px-3 bg-green-500 hover:bg-green-600 text-xs text-white"
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          onClick={() => handleApprovalChange(user.id, false)}
-                          disabled={isSubmitting}
-                          variant="destructive"
-                          size="sm"
-                          className="h-7 px-3 text-xs"
-                        >
-                          Reject
-                        </Button>
-                      </>
-                    )}
-                    <Button
-                      onClick={() => handleDeleteUser(user.id)}
+                      value={user.sessions}
+                      onChange={(e) => {
+                        const sessions = parseInt(e.target.value);
+                        if (!isNaN(sessions) && sessions >= 0) {
+                          handleUpdateUserSessions(user.id, sessions);
+                        }
+                      }}
+                      className="w-20"
                       disabled={isSubmitting}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Button
                       variant="destructive"
                       size="sm"
-                      className="h-7 px-3 text-xs"
+                      onClick={() => handleDeleteUser(user.id)}
+                      disabled={isSubmitting}
                     >
                       Delete
                     </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

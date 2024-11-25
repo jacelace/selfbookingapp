@@ -1,12 +1,13 @@
 'use client';
 
-import * as React from 'react';
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { collection, Timestamp, doc, setDoc } from 'firebase/firestore';
-import { db } from '@/app/firebase/firebaseInit';
+import { db } from '../../firebase/firebaseInit';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
-import { EnhancedBooking, EnhancedUser, Label } from '@/app/types';
+import { EnhancedBooking, EnhancedUser, Label } from '../../types';
+import { toast } from '../../components/ui/use-toast';
 
 interface BookingManagementProps {
   users: EnhancedUser[];
@@ -39,10 +40,52 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
     setIsLoading(true);
     try {
       const bookingRef = doc(db, 'bookings', bookingId);
-      await setDoc(bookingRef, updates, { merge: true });
+      const booking = bookings.find(b => b.id === bookingId);
+      const user = users.find(u => u.id === booking?.userId);
+      
+      if (!booking || !user) {
+        throw new Error('Booking or user not found');
+      }
+
+      // If status is being updated
+      if (updates.status) {
+        const userRef = doc(db, 'users', user.id);
+        const userUpdates: any = {};
+        
+        // Handle remaining bookings based on status
+        if (updates.status === 'confirmed' && booking.status !== 'confirmed') {
+          userUpdates.remainingBookings = (user.remainingBookings || 0) - 1;
+        } else if (booking.status === 'confirmed' && updates.status !== 'confirmed') {
+          userUpdates.remainingBookings = (user.remainingBookings || 0) + 1;
+        }
+        
+        // Update user if needed
+        if (Object.keys(userUpdates).length > 0) {
+          await setDoc(userRef, userUpdates, { merge: true });
+        }
+      }
+
+      // Update booking with timestamp
+      const bookingUpdates = {
+        ...updates,
+        updatedAt: Timestamp.now()
+      };
+      
+      await setDoc(bookingRef, bookingUpdates, { merge: true });
       onRefresh?.();
+      
+      toast({
+        title: "Success",
+        description: "Booking updated successfully",
+        variant: "default",
+      });
     } catch (error) {
       console.error('Error updating booking:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update booking",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }

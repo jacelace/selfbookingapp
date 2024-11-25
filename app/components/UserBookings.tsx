@@ -41,7 +41,7 @@ export default function UserBookings({ showPast = false }: UserBookingsProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userInfo, setUserInfo] = useState<{ name: string; email: string } | null>(null);
+  const [userInfo, setUserInfo] = useState<{ name: string; email: string; remainingSessions?: number } | null>(null);
   const [bookingSettings, setBookingSettings] = useState<{ timeLimit: number; cancelTimeLimit: number }>({ timeLimit: 48, cancelTimeLimit: 24 });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -58,7 +58,8 @@ export default function UserBookings({ showPast = false }: UserBookingsProps) {
           if (userDoc.exists()) {
             setUserInfo({
               name: userDoc.data().name || user.displayName || 'User',
-              email: user.email || 'No email provided'
+              email: user.email || 'No email provided',
+              remainingSessions: userDoc.data().remainingSessions
             });
           }
         } catch (error) {
@@ -278,7 +279,10 @@ export default function UserBookings({ showPast = false }: UserBookingsProps) {
         </p>
         {!showPast && (
           <div className="mt-6">
-            <UserBookingForm />
+            <UserBookingForm
+              userId={currentUser?.uid}
+              remainingSessions={userInfo?.remainingSessions || 0}
+            />
           </div>
         )}
       </div>
@@ -287,7 +291,12 @@ export default function UserBookings({ showPast = false }: UserBookingsProps) {
 
   return (
     <div className="space-y-4">
-      {!showPast && <UserBookingForm />}
+      {!showPast && (
+        <UserBookingForm
+          userId={currentUser?.uid}
+          remainingSessions={userInfo?.remainingSessions || 0}
+        />
+      )}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
