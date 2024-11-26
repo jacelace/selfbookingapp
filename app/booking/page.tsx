@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/clientApp';
 import { toast } from '../components/ui/use-toast';
@@ -26,69 +26,69 @@ export default function BookingPage() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    const checkApprovalStatus = async () => {
-      const currentUser = auth?.currentUser;
-      if (!currentUser) {
+  const checkApprovalStatus = useCallback(async () => {
+    const currentUser = auth?.currentUser;
+    if (!currentUser) {
+      router.push('/');
+      return;
+    }
+
+    try {
+      console.log('Checking user status for:', currentUser.uid);
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      const userDataFromDb = userDoc.data() as UserData;
+      console.log('User data:', userDataFromDb);
+
+      if (!userDataFromDb) {
+        console.log('No user data found');
+        toast({
+          title: "Error",
+          description: "User data not found",
+          variant: "destructive",
+        });
         router.push('/');
         return;
       }
 
-      try {
-        console.log('Checking user status for:', currentUser.uid);
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        const userDataFromDb = userDoc.data() as UserData;
-        console.log('User data:', userDataFromDb);
-
-        if (!userDataFromDb) {
-          console.log('No user data found');
-          toast({
-            title: "Error",
-            description: "User data not found",
-            variant: "destructive",
-          });
-          router.push('/');
-          return;
-        }
-
-        if (!userDataFromDb.isApproved) {
-          console.log('User not approved');
-          toast({
-            title: "Access Denied",
-            description: "Your account is pending approval",
-            variant: "destructive",
-          });
-          router.push('/');
-          return;
-        }
-
-        const userData: UserData = {
-          name: userDoc.data()?.name || '',
-          email: userDoc.data()?.email || '',
-          remainingBookings: userDoc.data()?.remainingBookings || 0,
-          phone: userDoc.data()?.phone || '',
-          status: userDoc.data()?.status,
-          isApproved: userDoc.data()?.isApproved,
-          role: userDoc.data()?.role,
-          userLabel: userDoc.data()?.userLabel,
-          labelColor: userDoc.data()?.labelColor,
-        };
-
-        setUserData(userData);
-      } catch (error) {
-        console.error('Error checking approval status:', error);
+      if (!userDataFromDb.isApproved) {
+        console.log('User not approved');
         toast({
-          title: "Error",
-          description: "Failed to check approval status",
+          title: "Access Denied",
+          description: "Your account is pending approval",
           variant: "destructive",
         });
-      } finally {
-        setLoading(false);
+        router.push('/');
+        return;
       }
-    };
 
-    checkApprovalStatus();
+      const userData: UserData = {
+        name: userDoc.data()?.name || '',
+        email: userDoc.data()?.email || '',
+        remainingBookings: userDoc.data()?.remainingBookings || 0,
+        phone: userDoc.data()?.phone || '',
+        status: userDoc.data()?.status,
+        isApproved: userDoc.data()?.isApproved,
+        role: userDoc.data()?.role,
+        userLabel: userDoc.data()?.userLabel,
+        labelColor: userDoc.data()?.labelColor,
+      };
+
+      setUserData(userData);
+    } catch (error) {
+      console.error('Error checking approval status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to check approval status",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   }, [router]);
+
+  useEffect(() => {
+    checkApprovalStatus();
+  }, [checkApprovalStatus]);
 
   if (loading) return <LoadingSpinner />;
 
