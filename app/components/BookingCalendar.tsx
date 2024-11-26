@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, getDocs, addDoc, Timestamp, doc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/clientApp';
 import { format, isSameDay } from 'date-fns';
@@ -51,6 +51,25 @@ export default function BookingCalendar({ userData, onRefresh }: BookingCalendar
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const fetchBookings = useCallback(async () => {
+    if (!auth.currentUser) return;
+
+    try {
+      const q = query(
+        collection(db, 'bookings'),
+        where('userId', '==', auth.currentUser.uid)
+      );
+      const snapshot = await getDocs(q);
+      const bookingsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Booking[];
+      setBookings(bookingsData);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    }
+  }, []);
+
   // Fetch time-off periods
   useEffect(() => {
     const fetchTimeOffPeriods = async () => {
@@ -71,27 +90,8 @@ export default function BookingCalendar({ userData, onRefresh }: BookingCalendar
 
   // Fetch bookings
   useEffect(() => {
-    const fetchBookings = async () => {
-      if (!auth.currentUser) return;
-
-      try {
-        const q = query(
-          collection(db, 'bookings'),
-          where('userId', '==', auth.currentUser.uid)
-        );
-        const snapshot = await getDocs(q);
-        const bookingsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Booking[];
-        setBookings(bookingsData);
-      } catch (error) {
-        console.error('Error fetching bookings:', error);
-      }
-    };
-
     fetchBookings();
-  }, []);
+  }, [fetchBookings]);
 
   const isDateInTimeOff = (date: Date) => {
     return timeOffPeriods.some(period => {
@@ -159,6 +159,8 @@ export default function BookingCalendar({ userData, onRefresh }: BookingCalendar
 
       setSelectedTime(null);
       onRefresh?.();
+      // Refresh the bookings list
+      await fetchBookings();
 
       toast({
         title: "Success",
