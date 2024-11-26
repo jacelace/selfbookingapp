@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, where, orderBy, onSnapshot, Timestamp, getDoc, doc, addDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, Timestamp, getDoc, doc, addDoc, getDocs, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/clientApp';
 import LoadingSpinner from './LoadingSpinner';
 import { useToast } from './ui/use-toast';
