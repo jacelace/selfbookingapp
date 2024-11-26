@@ -69,9 +69,9 @@ export type EnhancedBooking = Booking & {
   label?: Label;
 };
 
-export type EnhancedUser = User & {
+export interface EnhancedUser extends User {
   bookings?: Booking[];
-};
+}
 
 export interface BookingFormData {
   date: Timestamp;

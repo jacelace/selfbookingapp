@@ -110,7 +110,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
       const newBooking = {
         userId: user.id,
         userName: user.name,
-        userLabel: user.label || 'Client',
+        userLabel: user.userLabel || 'Client',
         userLabelColor: user.labelColor || '#808080',
         date: Timestamp.fromDate(selectedDate),
         time: selectedTime,
@@ -239,7 +239,7 @@ const BookingManagement: React.FC<BookingManagementProps> = ({
                         >
                           <div className="flex items-center space-x-2">
                             <span>{user.name}</span>
-                            <ColorLabel name={user.label || 'Client'} color={user.labelColor || '#808080'} />
+                            <ColorLabel name={user.userLabel || 'Client'} color={user.labelColor || '#808080'} />
                           </div>
                         </Button>
                       ))}
