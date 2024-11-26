@@ -3,7 +3,8 @@ import { Timestamp } from 'firebase/firestore';
 export function createGoogleCalendarUrl(booking: {
   date: Timestamp;
   time: string;
-  userLabel?: string;
+  title?: string;
+  description?: string;
 }) {
   // Parse the date and time
   const bookingDate = booking.date.toDate();
@@ -27,9 +28,9 @@ export function createGoogleCalendarUrl(booking: {
 
   const params = new URLSearchParams({
     action: 'TEMPLATE',
-    text: `Booking Session${booking.userLabel ? ` - ${booking.userLabel}` : ''}`,
+    text: booking.title || 'Booking Session',
     dates: `${formatDate(startTime)}/${formatDate(endTime)}`,
-    details: 'Booking session created via Self Booking App',
+    details: booking.description || 'Booking session created via Self Booking App',
   });
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
