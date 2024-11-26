@@ -9,13 +9,14 @@ import { useToast } from './ui/use-toast';
 import ColorLabel from './ColorLabel';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Button } from './ui/button';
-import { Clock, X, Check, AlertCircle, Calendar, Search } from 'lucide-react';
+import { Clock, X, Check, AlertCircle, Calendar as CalendarIcon, Search } from 'lucide-react';
 import { createGoogleCalendarUrl } from '../lib/calendar-utils';
 import { cn } from '../lib/utils';
 import { format, isSameDay } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { BOOKING_TIMES, TimeString } from '../lib/constants';
+import { Calendar } from './ui/calendar';
 
 interface Booking {
   id: string;
@@ -46,7 +47,7 @@ export default function UserBookings() {
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userInfo, setUserInfo] = useState<{ name: string; email: string; remainingSessions?: number } | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [timeOffPeriods, setTimeOffPeriods] = useState<TimeOff[]>([]);
   const [showDayDialog, setShowDayDialog] = useState(false);
   const { toast } = useToast();
@@ -167,7 +168,7 @@ export default function UserBookings() {
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={setSelectedDate}
+                onSelect={(date: Date | null) => setSelectedDate(date)}
                 disabled={isDateDisabled}
                 className="rounded-md border"
               />
