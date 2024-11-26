@@ -1,16 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/clientApp';
 import { toast } from '../components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '../components/LoadingSpinner';
-import UserBookings from '../components/UserBookings';
-import BookingFlow from '../components/BookingFlow';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Calendar, Clock } from 'lucide-react';
+import BookingCalendar from '../components/BookingCalendar';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 
 interface UserData {
   name: string;
@@ -20,8 +17,7 @@ interface UserData {
   status?: string;
   isApproved?: boolean;
   role?: string;
-  labelId?: string;
-  labelName?: string;
+  userLabel?: string;
   labelColor?: string;
 }
 
@@ -74,8 +70,7 @@ export default function BookingPage() {
           status: userDoc.data()?.status,
           isApproved: userDoc.data()?.isApproved,
           role: userDoc.data()?.role,
-          labelId: userDoc.data()?.labelId,
-          labelName: userDoc.data()?.labelName,
+          userLabel: userDoc.data()?.userLabel,
           labelColor: userDoc.data()?.labelColor,
         };
 
@@ -95,92 +90,44 @@ export default function BookingPage() {
     checkApprovalStatus();
   }, [router]);
 
-  const handleUserInfoUpdate = async (info: Partial<UserData>) => {
-    if (!auth.currentUser) return;
+  if (loading) return <LoadingSpinner />;
 
-    try {
-      const userRef = doc(db, 'users', auth.currentUser.uid);
-      await updateDoc(userRef, info);
-      setUserData(prev => prev ? { ...prev, ...info } : null);
-      toast({
-        title: "Success",
-        description: "User information updated successfully",
-      });
-    } catch (error) {
-      console.error('Error updating user info:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update user information",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleBookingComplete = () => {
-    if (!userData) return;
-    
-    setUserData(prev => prev ? {
-      ...prev,
-      remainingBookings: Math.max(0, prev.remainingBookings - 1)
-    } : null);
-  };
-
-  if (loading) {
+  if (!userData) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <LoadingSpinner size="lg" />
+      <div className="flex items-center justify-center min-h-screen">
+        <Card>
+          <CardHeader>
+            <CardTitle>Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>Please log in to access booking.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="max-w-4xl mx-auto">
-        <Tabs defaultValue="book" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="book" className="space-x-2">
-              <Calendar className="h-4 w-4" />
-              <span>Book Session</span>
-            </TabsTrigger>
-            <TabsTrigger value="bookings" className="space-x-2">
-              <Clock className="h-4 w-4" />
-              <span>My Bookings</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="book" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Book a New Session</CardTitle>
-                <CardDescription>
-                  You have {userData?.remainingBookings || 0} sessions remaining
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-6">
-                <BookingFlow
-                  userData={userData}
-                  onUserInfoUpdate={handleUserInfoUpdate}
-                  onBookingComplete={handleBookingComplete}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="bookings">
-            <Card>
-              <CardHeader>
-                <CardTitle>My Bookings</CardTitle>
-                <CardDescription>
-                  View and manage your upcoming sessions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <UserBookings />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+    <div className="container mx-auto py-6 space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Book a Session</CardTitle>
+          {userData.remainingBookings !== undefined && (
+            <p className="text-sm text-muted-foreground">
+              Remaining bookings: {userData.remainingBookings}
+            </p>
+          )}
+        </CardHeader>
+        <CardContent>
+          <BookingCalendar 
+            userData={userData}
+            onRefresh={() => {
+              // Refresh user data after booking
+              checkApprovalStatus();
+            }}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }
