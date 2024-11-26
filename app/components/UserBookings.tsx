@@ -15,7 +15,7 @@ import { cn } from '../lib/utils';
 import { format, isSameDay } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
-import { BOOKING_TIMES } from '../lib/constants';
+import { BOOKING_TIMES, TimeString } from '../lib/constants';
 
 interface Booking {
   id: string;
@@ -24,7 +24,7 @@ interface Booking {
   userLabel: string;
   userLabelColor: string;
   date: Timestamp;
-  time: string;
+  time: TimeString;
   recurring: 'none' | 'weekly';
   recurringCount?: number;
   status: 'confirmed' | 'cancelled' | 'rescheduled';
