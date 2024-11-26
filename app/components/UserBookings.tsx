@@ -1,22 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, where, orderBy, onSnapshot, Timestamp, getDoc, doc, updateDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, Timestamp, getDoc, doc, addDoc, getDocs } from 'firebase/firestore';
 import { db, auth } from '../firebase/clientApp';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import LoadingSpinner from './LoadingSpinner';
 import { useToast } from './ui/use-toast';
 import ColorLabel from './ColorLabel';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Button } from './ui/button';
-import { Clock, X, Check, AlertCircle, Calendar as CalendarIcon, Search } from 'lucide-react';
+import { Clock, Calendar as CalendarIcon } from 'lucide-react';
 import { createGoogleCalendarUrl } from '../lib/calendar-utils';
 import { cn } from '../lib/utils';
 import { format, isSameDay } from 'date-fns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { Input } from './ui/input';
-import { BOOKING_TIMES, TimeString } from '../lib/constants';
 import { Calendar } from './ui/calendar';
+import { BOOKING_TIMES, TimeString } from '../lib/constants';
 
 interface Booking {
   id: string;
@@ -46,10 +43,10 @@ export default function UserBookings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userInfo, setUserInfo] = useState<{ name: string; email: string; remainingSessions?: number } | null>(null);
+  const [userInfo, setUserInfo] = useState<{ name: string; email: string; remainingBookings?: number; userLabel?: string; labelColor?: string } | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<TimeString | null>(null);
   const [timeOffPeriods, setTimeOffPeriods] = useState<TimeOff[]>([]);
-  const [showDayDialog, setShowDayDialog] = useState(false);
   const { toast } = useToast();
 
   // Handle auth state changes
@@ -63,7 +60,9 @@ export default function UserBookings() {
             setUserInfo({
               name: userDoc.data().name || user.displayName || 'User',
               email: user.email || 'No email provided',
-              remainingSessions: userDoc.data().remainingSessions
+              remainingBookings: userDoc.data().remainingBookings,
+              userLabel: userDoc.data().userLabel,
+              labelColor: userDoc.data().labelColor
             });
           }
         } catch (error) {
@@ -71,7 +70,7 @@ export default function UserBookings() {
         }
       } else {
         setLoading(false);
-        setError('Please log in to view your bookings');
+        setError('Please log in to view and make bookings');
         setUserInfo(null);
       }
     });
@@ -134,15 +133,72 @@ export default function UserBookings() {
     return date < today || isWeekend || isDateInTimeOff(date);
   };
 
-  const getDayBookings = (date: Date) => {
-    return bookings.filter(booking => {
-      const bookingDate = booking.date instanceof Timestamp ? booking.date.toDate() : booking.date;
-      return isSameDay(bookingDate, date);
-    }).sort((a, b) => {
-      const timeA = BOOKING_TIMES.indexOf(a.time);
-      const timeB = BOOKING_TIMES.indexOf(b.time);
-      return timeA - timeB;
+  const isTimeSlotBooked = (date: Date, timeSlot: TimeString) => {
+    return bookings.some(booking => {
+      const bookingDate = booking.date instanceof Timestamp ? booking.date.toDate() : new Date(booking.date);
+      return isSameDay(bookingDate, date) && booking.time === timeSlot && booking.status !== 'cancelled';
     });
+  };
+
+  const handleBookSession = async () => {
+    if (!selectedDate || !selectedTime || !currentUser || !userInfo) {
+      toast({
+        title: "Error",
+        description: "Please select a date and time for your booking",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!userInfo.remainingBookings || userInfo.remainingBookings <= 0) {
+      toast({
+        title: "Error",
+        description: "You have no remaining bookings available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const newBooking = {
+        userId: currentUser.uid,
+        userName: userInfo.name,
+        userLabel: userInfo.userLabel || 'Client',
+        userLabelColor: userInfo.labelColor || '#808080',
+        date: Timestamp.fromDate(selectedDate),
+        time: selectedTime,
+        status: 'confirmed' as const,
+        recurring: 'none' as const,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      };
+
+      await addDoc(collection(db, 'bookings'), newBooking);
+
+      // Update user's remaining bookings
+      const userRef = doc(db, 'users', currentUser.uid);
+      await getDoc(userRef).then(async (docSnap) => {
+        if (docSnap.exists()) {
+          const currentBookings = docSnap.data().remainingBookings || 0;
+          await updateDoc(userRef, {
+            remainingBookings: currentBookings - 1
+          });
+        }
+      });
+
+      setSelectedTime(null);
+      toast({
+        title: "Success",
+        description: "Your session has been booked successfully",
+      });
+    } catch (error) {
+      console.error('Error booking session:', error);
+      toast({
+        title: "Error",
+        description: "Failed to book session. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) return <LoadingSpinner />;
@@ -152,36 +208,73 @@ export default function UserBookings() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">My Bookings</h2>
-          {userInfo?.remainingSessions !== undefined && (
+          <h2 className="text-2xl font-bold">Book a Session</h2>
+          {userInfo?.remainingBookings !== undefined && (
             <p className="text-sm text-gray-500">
-              Remaining sessions: {userInfo.remainingSessions}
+              Remaining bookings: {userInfo.remainingBookings}
             </p>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Calendar Section */}
         <div className="space-y-4">
           <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
             <div className="p-6">
+              <h3 className="text-lg font-medium mb-4">Select Date</h3>
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={(date: Date | null) => setSelectedDate(date)}
+                onSelect={setSelectedDate}
                 disabled={isDateDisabled}
                 className="rounded-md border"
               />
             </div>
           </div>
+
+          {selectedDate && (
+            <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+              <div className="p-6">
+                <h3 className="text-lg font-medium mb-4">Available Time Slots</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {BOOKING_TIMES.map((time) => (
+                    <Button
+                      key={time}
+                      variant={selectedTime === time ? "default" : "outline"}
+                      className={cn(
+                        "w-full",
+                        isTimeSlotBooked(selectedDate, time) && "opacity-50 cursor-not-allowed"
+                      )}
+                      disabled={isTimeSlotBooked(selectedDate, time)}
+                      onClick={() => setSelectedTime(time)}
+                    >
+                      {time}
+                    </Button>
+                  ))}
+                </div>
+
+                {selectedTime && (
+                  <Button
+                    className="w-full mt-4"
+                    onClick={handleBookSession}
+                    disabled={!userInfo?.remainingBookings || userInfo.remainingBookings <= 0}
+                  >
+                    Book Session
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Upcoming Bookings Section */}
         <div className="space-y-4">
           <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
             <div className="p-6">
               <h3 className="text-lg font-medium mb-4">Upcoming Bookings</h3>
               {bookings.length === 0 ? (
-                <p className="text-gray-500">No bookings found</p>
+                <p className="text-muted-foreground">No upcoming bookings</p>
               ) : (
                 <div className="space-y-4">
                   {bookings
@@ -204,7 +297,7 @@ export default function UserBookings() {
                             </span>
                           </div>
                           <div className="mt-1">
-                            <ColorLabel color={booking.userLabelColor} name={booking.userLabel} />
+                            <ColorLabel name={booking.userLabel} color={booking.userLabelColor} />
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -212,7 +305,7 @@ export default function UserBookings() {
                             href={createGoogleCalendarUrl({
                               date: booking.date,
                               time: booking.time,
-                              title: `Training Session`,
+                              title: 'Training Session',
                               description: `Training session with ${booking.userName}`
                             })}
                             target="_blank"
@@ -230,43 +323,6 @@ export default function UserBookings() {
           </div>
         </div>
       </div>
-
-      <Dialog open={showDayDialog} onOpenChange={setShowDayDialog}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedDate && `Bookings for ${format(selectedDate, 'MMMM d, yyyy')}`}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {selectedDate && getDayBookings(selectedDate).map(booking => (
-              <div
-                key={booking.id}
-                className="flex items-center justify-between p-4 rounded-lg border"
-              >
-                <div className="flex items-center space-x-4">
-                  <Clock className="w-4 h-4" />
-                  <span>{booking.time}</span>
-                  <ColorLabel color={booking.userLabelColor} name={booking.userLabel} />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className={cn(
-                    "px-2 py-1 rounded-full text-sm",
-                    booking.status === 'confirmed' ? "bg-green-100 text-green-800" :
-                    booking.status === 'cancelled' ? "bg-red-100 text-red-800" :
-                    "bg-yellow-100 text-yellow-800"
-                  )}>
-                    {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {selectedDate && getDayBookings(selectedDate).length === 0 && (
-              <p className="text-gray-500 text-center py-4">No bookings for this date</p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
