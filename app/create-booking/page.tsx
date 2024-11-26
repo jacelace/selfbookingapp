@@ -16,6 +16,8 @@ interface UserData {
   status?: string;
   isApproved?: boolean;
   role?: string;
+  userLabel?: string;
+  labelColor?: string;
 }
 
 export default function CreateBookingPage() {
@@ -24,7 +26,7 @@ export default function CreateBookingPage() {
   const { toast } = useToast();
 
   // Get the current user's info
-  const [userInfo, setUserInfo] = useState<{ remainingSessions: number } | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -32,8 +34,16 @@ export default function CreateBookingPage() {
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
-            setUserInfo({
-              remainingSessions: userDoc.data().remainingSessions || 0
+            const data = userDoc.data();
+            setUserData({
+              name: data.name || '',
+              email: data.email || '',
+              remainingBookings: data.remainingSessions || 0,
+              status: data.status,
+              isApproved: data.isApproved,
+              role: data.role,
+              userLabel: data.userLabel,
+              labelColor: data.labelColor
             });
           }
         } catch (error) {
@@ -89,7 +99,7 @@ export default function CreateBookingPage() {
     checkUser();
   }, [router, toast]);
 
-  if (loading) {
+  if (loading || !userData) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <LoadingSpinner />
@@ -109,7 +119,8 @@ export default function CreateBookingPage() {
     <div className="container mx-auto p-6 space-y-6">
       <UserBookingForm
         userId={auth.currentUser.uid}
-        remainingSessions={userInfo?.remainingSessions || 0}
+        remainingSessions={userData.remainingBookings}
+        userData={userData}
       />
     </div>
   );
