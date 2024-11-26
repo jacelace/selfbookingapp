@@ -204,7 +204,7 @@ export default function UserBookings() {
                             </span>
                           </div>
                           <div className="mt-1">
-                            <ColorLabel color={booking.userLabelColor} text={booking.userLabel} />
+                            <ColorLabel color={booking.userLabelColor} name={booking.userLabel} />
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -247,7 +247,7 @@ export default function UserBookings() {
                 <div className="flex items-center space-x-4">
                   <Clock className="w-4 h-4" />
                   <span>{booking.time}</span>
-                  <ColorLabel color={booking.userLabelColor} text={booking.userLabel} />
+                  <ColorLabel color={booking.userLabelColor} name={booking.userLabel} />
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className={cn(
