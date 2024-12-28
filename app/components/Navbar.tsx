@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { User } from 'firebase/auth';
 import { useFirebase } from '../FirebaseProvider';
 import { Button } from './ui/button';
@@ -9,10 +10,12 @@ import LoadingSpinner from './LoadingSpinner';
 
 export default function Navbar() {
   const { user, logout, loading, isAdmin } = useFirebase();
+  const router = useRouter();
 
   const handleLogout = async () => {
     try {
       await logout();
+      router.push('/login');
     } catch (error) {
       console.error('Error logging out:', error);
     }

@@ -24,7 +24,9 @@ service cloud.firestore {
       
       // Allow creation of the first admin user or if an admin is creating
       allow create: if isSignedIn() && 
-                   ((request.auth.uid == userId && request.resource.data.email == 'admin@example.com') || 
+                   ((request.auth.uid == userId && 
+                     (request.resource.data.email == 'admin@example.com' || 
+                      request.resource.data.email == 'serajohanas@gmail.com')) || 
                     isAdmin());
       
       // Users can update their own basic info
